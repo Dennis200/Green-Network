@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share2, MoreHorizontal, Repeat, Leaf, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame } from 'lucide-react';
+import { MessageCircle, Share2, MoreHorizontal, Repeat, Leaf, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool } from 'lucide-react';
 import { CURRENT_USER } from '../constants';
 import { Post, Vibe } from '../types';
 import VibeViewer from './VibeViewer';
 import ReportModal from './ReportModal';
+import { ShareSheet, MoreMenu } from './PostDetail';
 import { subscribeToPosts, toggleLikePost, subscribeToVibes, repostPost, incrementShare, checkIsLiked } from '../services/dataService';
 import { auth } from '../services/firebase';
 
@@ -172,6 +173,13 @@ interface PostCardProps {
 export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, onClick, onSearch, onQuote }) => {
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(post.likes);
+    const [repostCount, setRepostCount] = useState(post.reposts || 0);
+    
+    // Menu States
+    const [showShare, setShowShare] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
+    const [showRepostMenu, setShowRepostMenu] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     
     useEffect(() => {
         if(auth.currentUser) {
@@ -188,23 +196,34 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, o
         toggleLikePost(post.id, auth.currentUser.uid, post.user.id);
     };
 
-    const handleShare = (e: React.MouseEvent) => {
+    const handleShareClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         incrementShare(post.id);
-        alert("Shared! (Mock)");
+        setShowShare(true);
     }
 
-    const handleRepost = (e: React.MouseEvent) => {
+    const handleRepostClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if(confirm("Repost?")) {
-            if(auth.currentUser) {
-                // In a real component we'd need full User object for current user here
-                // For this feed item we assume global CURRENT_USER matches auth for simplicity in this context
-                // Or fetch it.
-                repostPost(post, CURRENT_USER); 
-                onQuote?.();
-            }
+        setShowRepostMenu(true);
+    }
+
+    const performRepost = async () => {
+        if(auth.currentUser) {
+            setRepostCount(prev => prev + 1);
+            await repostPost(post, CURRENT_USER); 
+            setShowRepostMenu(false);
         }
+    }
+
+    const performQuote = () => {
+        if (onQuote) onQuote();
+        else alert("Quote feature is currently in development.");
+        setShowRepostMenu(false);
+    }
+
+    const handleOptionsClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowOptions(true);
     }
 
     const renderContent = (content: string) => {
@@ -219,59 +238,106 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, o
     };
 
     return (
-        <div 
-            onClick={onClick}
-            className="group relative bg-zinc-900/20 backdrop-blur-sm rounded-[2rem] p-4 cursor-pointer hover:bg-white/[0.02] transition-colors mx-2 border border-white/[0.02]"
-        >
-            <div className="flex gap-3">
-                <div onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.user.id)}} className="shrink-0 cursor-pointer">
-                    <img src={post.user.avatar} className="w-11 h-11 rounded-full border border-zinc-800 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                            <span className="font-bold text-white text-[15px] hover:underline cursor-pointer">{post.user.name}</span>
-                            {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
-                            <span className="text-zinc-500 text-sm">@{post.user.handle.replace('@','')}</span>
-                            <span className="text-zinc-600 text-xs">· {post.timestamp}</span>
-                        </div>
-                        <button className="text-zinc-600 hover:text-white p-1 -mr-2 rounded-full hover:bg-zinc-800 transition-colors"><MoreHorizontal size={18} /></button>
+        <>
+            <div 
+                onClick={onClick}
+                className="group relative bg-zinc-900/20 backdrop-blur-sm rounded-[2rem] p-4 cursor-pointer hover:bg-white/[0.02] transition-colors mx-2 border border-white/[0.02]"
+            >
+                <div className="flex gap-3">
+                    <div onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.user.id)}} className="shrink-0 cursor-pointer">
+                        <img src={post.user.avatar} className="w-11 h-11 rounded-full border border-zinc-800 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
                     </div>
-
-                    <p className="text-white text-[15px] whitespace-pre-wrap leading-relaxed">{renderContent(post.content)}</p>
-
-                    {post.images && post.images.length > 0 && (
-                        <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
-                            {post.images.map((img, i) => (
-                                <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-2xl border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-64'}`}>
-                                    <img src={img} className="h-full w-full object-cover" alt="Post media" />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {post.quotedPost && (
-                        <div className="mt-3 border border-white/10 rounded-2xl p-3 bg-white/5">
-                            <div className="flex items-center gap-2 mb-1">
-                                <img src={post.quotedPost.user.avatar} className="w-5 h-5 rounded-full" />
-                                <span className="text-xs font-bold text-white">{post.quotedPost.user.name}</span>
+                    
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                <span className="font-bold text-white text-[15px] hover:underline cursor-pointer">{post.user.name}</span>
+                                {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
+                                <span className="text-zinc-500 text-sm">@{post.user.handle.replace('@','')}</span>
+                                <span className="text-zinc-600 text-xs">· {post.timestamp}</span>
                             </div>
-                            <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                            <button onClick={handleOptionsClick} className="text-zinc-600 hover:text-white p-1 -mr-2 rounded-full hover:bg-zinc-800 transition-colors">
+                                <MoreHorizontal size={18} />
+                            </button>
                         </div>
-                    )}
 
-                    <div className="flex justify-between items-center mt-3 max-w-md pr-2 text-zinc-500">
-                        <ActionButton icon={<MessageCircle size={18} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={(e) => { e.stopPropagation(); }} />
-                        <ActionButton icon={<Repeat size={18} />} count={post.reposts} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepost} />
-                        <ActionButton icon={<Flame size={18} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
-                        <div className="flex gap-1">
-                            <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShare} />
+                        <p className="text-white text-[15px] whitespace-pre-wrap leading-relaxed">{renderContent(post.content)}</p>
+
+                        {post.images && post.images.length > 0 && (
+                            <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+                                {post.images.map((img, i) => (
+                                    <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-2xl border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-64'}`}>
+                                        <img src={img} className="h-full w-full object-cover" alt="Post media" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {post.quotedPost && (
+                            <div className="mt-3 border border-white/10 rounded-2xl p-3 bg-white/5">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <img src={post.quotedPost.user.avatar} className="w-5 h-5 rounded-full" />
+                                    <span className="text-xs font-bold text-white">{post.quotedPost.user.name}</span>
+                                </div>
+                                <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between items-center mt-3 max-w-md pr-2 text-zinc-500">
+                            {/* Comment Button (propagates click to open detail) */}
+                            <ActionButton icon={<MessageCircle size={18} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
+                            
+                            {/* Repost Button */}
+                            <ActionButton icon={<Repeat size={18} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
+                            
+                            {/* Like Button */}
+                            <ActionButton icon={<Flame size={18} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
+                            
+                            {/* Share Button */}
+                            <div className="flex gap-1">
+                                <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* --- Modals & Menus --- */}
+            {showShare && (
+                <ShareSheet onClose={() => setShowShare(false)} postLink={`https://green.app/post/${post.id}`} />
+            )}
+
+            {showOptions && (
+                <MoreMenu 
+                    onClose={() => setShowOptions(false)} 
+                    type="Post" 
+                    onReport={() => {
+                        setShowOptions(false);
+                        setShowReport(true);
+                    }}
+                    onBookmark={() => {
+                        // Bookmark logic
+                        setShowOptions(false);
+                    }}
+                />
+            )}
+
+            {showReport && (
+                <ReportModal 
+                    type="Post" 
+                    targetId={post.id} 
+                    onClose={() => setShowReport(false)} 
+                />
+            )}
+
+            {showRepostMenu && (
+                <RepostMenu 
+                    onClose={() => setShowRepostMenu(false)}
+                    onRepost={performRepost}
+                    onQuote={performQuote}
+                />
+            )}
+        </>
     );
 };
 
@@ -280,6 +346,38 @@ const ActionButton = ({ icon, count, color, bg, onClick }: any) => (
         <div className={`p-2 rounded-full transition-colors ${bg}`}>{icon}</div>
         {count !== undefined && <span className="text-xs font-medium">{count}</span>}
     </div>
+);
+
+const RepostMenu = ({ onClose, onRepost, onQuote }: { onClose: () => void, onRepost: () => void, onQuote: () => void }) => (
+    <>
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-3xl border-t border-white/10 p-6 pb-safe animate-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-6" />
+            <h3 className="text-center font-bold text-white mb-6">Repost</h3>
+            
+            <div className="space-y-3">
+                <button onClick={onRepost} className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-colors text-white font-bold">
+                    <Repeat size={24} className="text-green-500" />
+                    <div>
+                        <span className="block">Repost</span>
+                        <span className="text-xs text-zinc-400 font-normal">Instantly share to your feed</span>
+                    </div>
+                </button>
+                
+                <button onClick={onQuote} className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-colors text-white font-bold">
+                    <PenTool size={24} className="text-blue-400" />
+                    <div>
+                        <span className="block">Quote Post</span>
+                        <span className="text-xs text-zinc-400 font-normal">Add your own thoughts</span>
+                    </div>
+                </button>
+            </div>
+            
+            <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-black border border-zinc-800 text-white font-bold hover:bg-zinc-900">
+                Cancel
+            </button>
+        </div>
+    </>
 );
 
 export default Feed;
