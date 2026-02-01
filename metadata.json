@@ -1,0 +1,9 @@
+{
+  "name": "Green Stoners Network",
+  "description": "The premier social network built for Stoners first. Connect with growers, investors, and enthusiasts in an uncensored digital sanctuary.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
