@@ -5,7 +5,7 @@ import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT
 import { User, Vibe } from '../types';
 import MediaViewer from './MediaViewer';
 import VibeViewer from './VibeViewer';
-import { MoreMenu } from './PostDetail';
+import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import UserShop from './UserShop';
 import { checkIsFollowing, followUser, unfollowUser, subscribeToFollowStats } from '../services/dataService';

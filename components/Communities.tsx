@@ -4,7 +4,7 @@ import { Users, Search, Plus, ArrowLeft, MessageSquare, Hash, MoreHorizontal, Me
 import { MOCK_POSTS, CURRENT_USER, MOCK_USERS, MOCK_COMMUNITY_MESSAGES } from '../constants';
 import { Community, User, Message, CommunityEvent, Poll } from '../types';
 import { PostCard } from './Feed';
-import { MoreMenu } from './PostDetail';
+import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import { createCommunity, subscribeToCommunities, createPost } from '../services/dataService';
 

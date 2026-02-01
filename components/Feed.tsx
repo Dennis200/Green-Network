@@ -5,7 +5,7 @@ import { CURRENT_USER } from '../constants';
 import { Post, Vibe } from '../types';
 import VibeViewer from './VibeViewer';
 import ReportModal from './ReportModal';
-import { ShareSheet, MoreMenu } from './PostDetail';
+import { ShareSheet, MoreMenu, RepostMenu } from './Menus';
 import { subscribeToPosts, toggleLikePost, subscribeToVibes, repostPost, incrementShare, checkIsLiked } from '../services/dataService';
 import { auth } from '../services/firebase';
 
@@ -346,38 +346,6 @@ const ActionButton = ({ icon, count, color, bg, onClick }: any) => (
         <div className={`p-2 rounded-full transition-colors ${bg}`}>{icon}</div>
         {count !== undefined && <span className="text-xs font-medium">{count}</span>}
     </div>
-);
-
-const RepostMenu = ({ onClose, onRepost, onQuote }: { onClose: () => void, onRepost: () => void, onQuote: () => void }) => (
-    <>
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-3xl border-t border-white/10 p-6 pb-safe animate-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-6" />
-            <h3 className="text-center font-bold text-white mb-6">Repost</h3>
-            
-            <div className="space-y-3">
-                <button onClick={onRepost} className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-colors text-white font-bold">
-                    <Repeat size={24} className="text-green-500" />
-                    <div>
-                        <span className="block">Repost</span>
-                        <span className="text-xs text-zinc-400 font-normal">Instantly share to your feed</span>
-                    </div>
-                </button>
-                
-                <button onClick={onQuote} className="w-full flex items-center gap-4 p-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl transition-colors text-white font-bold">
-                    <PenTool size={24} className="text-blue-400" />
-                    <div>
-                        <span className="block">Quote Post</span>
-                        <span className="text-xs text-zinc-400 font-normal">Add your own thoughts</span>
-                    </div>
-                </button>
-            </div>
-            
-            <button onClick={onClose} className="w-full mt-6 py-3 rounded-xl bg-black border border-zinc-800 text-white font-bold hover:bg-zinc-900">
-                Cancel
-            </button>
-        </div>
-    </>
 );
 
 export default Feed;

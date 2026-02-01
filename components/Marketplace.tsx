@@ -4,7 +4,7 @@ import { Search, Filter, ShoppingBag, Heart, MessageCircle, MapPin, Tag, X, Chev
 import { CURRENT_USER } from '../constants';
 import { Product, User } from '../types';
 import { formatCurrency } from '../utils';
-import { MoreMenu } from './PostDetail';
+import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import { createProduct, subscribeToProducts } from '../services/dataService';
 import { uploadToCloudinary } from '../services/cloudinary';

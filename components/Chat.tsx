@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Phone, Video, Info, Image as ImageIcon, Mic, Search, Plus, Users, ArrowLeft, MoreVertical, X, UserPlus, Hash, ChevronRight, MessageCircle, MicOff, VideoOff, PhoneOff, Paperclip, Smile, CheckCheck, Check, Trash2, Play, Pause, FileAudio } from 'lucide-react';
 import { CURRENT_USER } from '../constants';
-import { MoreMenu } from './PostDetail';
+import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import { Message, User, Reaction } from '../types';
 import { subscribeToChats, subscribeToMessages, sendMessage, startChat } from '../services/dataService';

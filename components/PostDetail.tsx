@@ -5,6 +5,7 @@ import { Post, Comment } from '../types';
 import { CURRENT_USER } from '../constants';
 import MediaViewer from './MediaViewer';
 import ReportModal from './ReportModal';
+import { MoreMenu, ShareSheet } from './Menus';
 import { auth } from '../services/firebase';
 import { checkIsLiked, toggleLikePost, incrementView, incrementShare, repostPost, addComment, subscribeToComments } from '../services/dataService';
 import { subscribeToUserProfile } from '../services/userService';
@@ -382,109 +383,5 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
         </div>
     )
 }
-
-export const ShareSheet = ({ onClose, postLink }: { onClose: () => void, postLink?: string }) => {
-    const handleShare = async (platform: string) => {
-        const text = `Check out this post on Green: ${postLink}`;
-        try {
-            if (navigator.share && platform === 'native') {
-                await navigator.share({ title: 'Green Stoners Network', text, url: postLink });
-            } else {
-                alert(`Sharing to ${platform} simulated!\n${text}`);
-            }
-        } catch (e) {
-            console.error(e);
-        }
-        onClose();
-    };
-
-    return (
-        <>
-            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="fixed bottom-0 left-0 right-0 z-[60] bg-zinc-900 rounded-t-3xl border-t border-white/10 p-6 pb-safe animate-in slide-in-from-bottom duration-300">
-                <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-6" />
-                <h3 className="text-center font-bold text-white mb-6">Share to...</h3>
-                
-                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 mb-4">
-                    <ShareOption 
-                        icon={<Copy size={24} />} 
-                        label="Copy Link" 
-                        color="bg-zinc-800" 
-                        onClick={() => {
-                            if(postLink) navigator.clipboard.writeText(postLink);
-                            alert("Link copied to clipboard!");
-                            onClose();
-                        }}
-                    />
-                    <ShareOption icon={<Send size={24} />} label="DM" color="bg-gsn-green" iconColor="text-black" onClick={() => handleShare('DM')} />
-                    <ShareOption icon={<Camera size={24} />} label="Add to Vibe" color="bg-white" iconColor="text-black" onClick={() => handleShare('Vibe')} />
-                    <ShareOption icon={<Instagram size={24} />} label="Stories" color="bg-gradient-to-tr from-yellow-500 to-purple-600" onClick={() => handleShare('Instagram')} />
-                    <ShareOption icon={<Twitter size={24} />} label="X" color="bg-black border border-zinc-700" onClick={() => handleShare('X')} />
-                    <ShareOption icon={<MessageSquare size={24} />} label="SMS" color="bg-green-500" onClick={() => handleShare('SMS')} />
-                </div>
-                
-                <div className="border-t border-white/10 pt-4">
-                    <button onClick={onClose} className="w-full py-3 rounded-xl bg-zinc-800 text-white font-bold hover:bg-zinc-700">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        </>
-    );
-};
-
-const ShareOption = ({ icon, label, color, iconColor = 'text-white', onClick }: { icon: React.ReactNode, label: string, color: string, iconColor?: string, onClick?: () => void }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 min-w-[72px]">
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${color} ${iconColor}`}>
-            {icon}
-        </div>
-        <span className="text-xs font-bold text-zinc-400">{label}</span>
-    </button>
-);
-
-export const MoreMenu = ({ onClose, type, onReport, onBookmark, isBookmarked }: { onClose: () => void, type: string, onReport: () => void, onBookmark?: () => void, isBookmarked?: boolean }) => (
-    <>
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-[2rem] border-t border-white/10 p-6 pb-safe animate-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6" />
-            
-            <div className="space-y-2">
-                {onBookmark && (
-                    <button 
-                        onClick={() => { onBookmark(); onClose(); }}
-                        className="w-full p-4 flex items-center gap-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors font-bold text-white"
-                    >
-                        <Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />
-                        {isBookmarked ? 'Remove from Saved' : 'Save'}
-                    </button>
-                )}
-                
-                <button className="w-full p-4 flex items-center gap-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors font-bold text-white">
-                    <Share2 size={20} /> Share
-                </button>
-                
-                {(type === 'User' || type === 'Chat') && (
-                    <button className="w-full p-4 flex items-center gap-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl transition-colors font-bold text-white">
-                        <Ban size={20} /> Block
-                    </button>
-                )}
-
-                <button 
-                    onClick={onReport}
-                    className="w-full p-4 flex items-center gap-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-colors font-bold"
-                >
-                    <Flag size={20} /> Report {type}
-                </button>
-            </div>
-
-            <button 
-                onClick={onClose}
-                className="w-full py-4 mt-4 bg-black border border-zinc-800 rounded-xl font-bold text-zinc-400 hover:text-white transition-colors"
-            >
-                Cancel
-            </button>
-        </div>
-    </>
-);
 
 export default PostDetail;
