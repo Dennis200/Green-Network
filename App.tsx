@@ -5,7 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './services/firebase';
 import { subscribeToUserProfile, createUserProfile, userProfileExists } from './services/userService';
 import { subscribeToNotifications, subscribeToChats } from './services/dataService';
-import { ViewState, User, Notification } from './types';
+import { ViewState, User, Notification, Post } from './types';
 import Feed from './components/Feed';
 import Reels from './components/Reels';
 import { Profile } from './components/Profile';
@@ -218,6 +218,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER); // Logged in user state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [postToQuote, setPostToQuote] = useState<Post | null>(null);
   
   // Navigation State
   const [showLeftMenu, setShowLeftMenu] = useState(false);
@@ -376,12 +377,18 @@ export default function App() {
       }
   };
 
+  const handleQuote = (post: Post) => {
+      setPostToQuote(post);
+      setView(ViewState.CREATE);
+  };
+
   // --- RENDER CURRENT VIEW ---
   const renderView = () => {
     switch (view) {
       case ViewState.FEED:
         return (
             <Feed 
+                currentUser={currentUser}
                 onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} 
                 onNavigateToPost={(id) => { setSelectedPostId(id); setView(ViewState.POST_DETAILS); }}
                 onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }}
@@ -391,6 +398,7 @@ export default function App() {
                 followingIds={following}
                 headerVisible={headerVisible}
                 onNavigateToReels={() => setView(ViewState.REELS)}
+                onQuotePost={handleQuote}
             />
         );
       case ViewState.REELS:
@@ -435,7 +443,15 @@ export default function App() {
       case ViewState.EXPLORE:
         return <Explore initialQuery={searchQuery} />;
       case ViewState.CREATE:
-        return <CreatePost onBack={() => setView(ViewState.FEED)} />;
+        return (
+            <CreatePost 
+                onBack={() => {
+                    setPostToQuote(null);
+                    setView(ViewState.FEED);
+                }} 
+                quotedPost={postToQuote || undefined}
+            />
+        );
       case ViewState.CREATE_VIBE:
         return <CreateVibe onExit={() => setView(ViewState.FEED)} onPost={() => setView(ViewState.FEED)} />;
       case ViewState.CREATE_REEL:
@@ -446,8 +462,19 @@ export default function App() {
         return <Marketplace onNavigateToChat={() => setView(ViewState.CHAT)} startCreating={marketplaceStartCreate} />;
       case ViewState.POST_DETAILS:
         const post = MOCK_POSTS.find(p => p.id === selectedPostId);
-        if (!post) return <Feed onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} />;
-        return <PostDetail post={post} onBack={() => setView(ViewState.FEED)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }} onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} />;
+        // Fallback for mock post if not found, in real app would fetch
+        if (!post) return <Feed currentUser={currentUser} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} onQuotePost={handleQuote} />;
+        return (
+            <PostDetail 
+                post={post} 
+                currentUser={currentUser}
+                onBack={() => setView(ViewState.FEED)} 
+                onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} 
+                onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }} 
+                onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} 
+                onQuote={handleQuote}
+            />
+        );
       case ViewState.NOTIFICATIONS:
         return <Notifications onBack={() => setView(ViewState.FEED)} headerVisible={headerVisible} onSettings={() => setView(ViewState.SETTINGS)} />;
       case ViewState.COMMUNITIES:
@@ -463,7 +490,7 @@ export default function App() {
       case ViewState.SAVED:
         return <SavedPage onBack={() => setView(ViewState.PROFILE)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} />;
       default:
-        return <Feed onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} />;
+        return <Feed currentUser={currentUser} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} onQuotePost={handleQuote} />;
     }
   };
 

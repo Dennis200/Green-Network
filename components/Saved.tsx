@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft, Bookmark, Grid } from 'lucide-react';
-import { MOCK_POSTS } from '../constants';
+import { MOCK_POSTS, CURRENT_USER } from '../constants';
 import { PostCard } from './Feed';
 
 interface SavedProps {
@@ -29,6 +29,7 @@ const Saved: React.FC<SavedProps> = ({ onBack, onNavigateToProfile }) => {
                             <div key={post.id} className="bg-zinc-900/50 border border-white/5 rounded-2xl overflow-hidden">
                                 <PostCard 
                                     post={post} 
+                                    currentUser={CURRENT_USER}
                                     onNavigateToProfile={onNavigateToProfile} 
                                     onQuote={() => {}} 
                                 />

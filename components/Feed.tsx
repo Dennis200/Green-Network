@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Share2, MoreHorizontal, Repeat, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool } from 'lucide-react';
-import { CURRENT_USER } from '../constants';
-import { Post, Vibe } from '../types';
+import { MessageCircle, Share2, MoreHorizontal, Repeat, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool, ShieldCheck, Rss } from 'lucide-react';
+import { Post, Vibe, User } from '../types';
 import VibeViewer from './VibeViewer';
 import ReportModal from './ReportModal';
 import { ShareSheet, MoreMenu, RepostMenu } from './Menus';
 import { subscribeToPosts, toggleLikePost, subscribeToVibes, repostPost, incrementShare, checkIsLiked } from '../services/dataService';
 import { auth } from '../services/firebase';
 import { formatTimeShort } from '../utils';
+import PageGuide from './PageGuide';
 
 // Helper for Vibe grouping
 const getVibeGroups = (vibes: Vibe[]) => {
@@ -29,6 +29,7 @@ const getVibeGroups = (vibes: Vibe[]) => {
 };
 
 interface FeedProps {
+    currentUser: User;
     onNavigateToProfile: (id: string) => void;
     onNavigateToPost?: (id: string) => void;
     onNavigateToCommunity?: (id: string) => void;
@@ -38,16 +39,19 @@ interface FeedProps {
     followingIds: string[];
     headerVisible?: boolean;
     onNavigateToReels: () => void;
+    onQuotePost: (post: Post) => void;
 }
 
 const Feed: React.FC<FeedProps> = ({ 
+    currentUser,
     onNavigateToProfile, 
     onNavigateToPost, 
     onNavigateToCommunity,
     onSearch, 
     onNavigateToCreateStory, 
     headerVisible = true,
-    onNavigateToReels
+    onNavigateToReels,
+    onQuotePost
 }) => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [posts, setPosts] = useState<Post[]>([]);
@@ -77,7 +81,6 @@ const Feed: React.FC<FeedProps> = ({
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        // DB Listener updates automatically, so this is just visual
         setTimeout(() => {
             setIsRefreshing(false);
             setPullY(0);
@@ -93,19 +96,14 @@ const Feed: React.FC<FeedProps> = ({
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!isDragging.current) return;
-        
-        // If user scrolls down while dragging, stop pulling effect
         if (window.scrollY > 0) {
             isDragging.current = false;
             setPullY(0);
             return;
         }
-
         const currentY = e.touches[0].clientY;
         const diff = currentY - startY.current;
-
         if (diff > 0) {
-            // Apply resistance to the pull
             setPullY(diff * 0.4);
         } else {
             setPullY(0);
@@ -115,8 +113,7 @@ const Feed: React.FC<FeedProps> = ({
     const handleTouchEnd = () => {
         if (!isDragging.current) return;
         isDragging.current = false;
-
-        if (pullY > 80) { // Threshold to trigger refresh
+        if (pullY > 80) { 
             handleRefresh();
         } else {
             setPullY(0);
@@ -138,6 +135,15 @@ const Feed: React.FC<FeedProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
+            <PageGuide 
+                pageKey="feed"
+                steps={[
+                    { title: "Uncensored Feed", description: "Share your cultivation journey, glass collection, or sessions without fear of bans. This is your safe space.", icon: <ShieldCheck size={20} /> },
+                    { title: "Vibes", description: "Tap the circles at the top to see ephemeral stories from growers and friends. They disappear after 24 hours.", icon: <Zap size={20} /> },
+                    { title: "Interact", description: "Like, comment, repost, and share. Support the culture and build your reputation in the network.", icon: <Rss size={20} /> }
+                ]}
+            />
+
             {viewingVibes && (
                 <VibeViewer 
                     vibes={viewingVibes.vibes}
@@ -146,7 +152,6 @@ const Feed: React.FC<FeedProps> = ({
                 />
             )}
 
-            {/* Refresh Indicator */}
             <div 
                 className="absolute top-0 left-0 right-0 flex justify-center z-40 pointer-events-none"
                 style={{ 
@@ -164,7 +169,6 @@ const Feed: React.FC<FeedProps> = ({
                 </div>
             </div>
 
-            {/* Feed Content */}
             <div style={{ 
                 transform: isRefreshing ? 'translateY(60px)' : `translateY(${pullY * 0.4}px)`,
                 transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0,0,0.2,1)'
@@ -176,7 +180,7 @@ const Feed: React.FC<FeedProps> = ({
                             onClick={onNavigateToCreateStory}
                             className="min-w-[85px] w-[85px] h-[135px] rounded-[1.2rem] overflow-hidden relative cursor-pointer group bg-zinc-900/50 shrink-0 border border-white/5 hover:border-gsn-green/30 transition-all"
                         >
-                            <img src={CURRENT_USER.avatar} alt="Me" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-50 grayscale group-hover:grayscale-0" />
+                            <img src={currentUser.avatar} alt="Me" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-50 grayscale group-hover:grayscale-0" />
                             <div className="absolute inset-0 flex flex-col items-center justify-end pb-3">
                                 <div className="w-7 h-7 bg-gsn-green rounded-xl flex items-center justify-center mb-1 shadow-lg shadow-green-900/50">
                                     <Plus size={16} className="text-black stroke-[3px]" />
@@ -214,12 +218,14 @@ const Feed: React.FC<FeedProps> = ({
                             <React.Fragment key={post.id}>
                                 <PostCard 
                                     post={post} 
+                                    currentUser={currentUser}
                                     index={index}
                                     onNavigateToProfile={onNavigateToProfile}
                                     onNavigateToCommunity={onNavigateToCommunity}
                                     onNavigateToPost={onNavigateToPost}
                                     onClick={() => onNavigateToPost?.(post.id)}
                                     onSearch={onSearch}
+                                    onQuote={() => onQuotePost(post)}
                                 />
                             </React.Fragment>
                         ))
@@ -230,9 +236,9 @@ const Feed: React.FC<FeedProps> = ({
     );
 };
 
-// ... PostCard and sub-components ...
 interface PostCardProps {
     post: Post;
+    currentUser: User;
     index?: number;
     onNavigateToProfile: (id: string) => void;
     onNavigateToPost?: (id: string) => void;
@@ -242,7 +248,7 @@ interface PostCardProps {
     onQuote?: () => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateToProfile, onNavigateToPost, onNavigateToCommunity, onClick, onSearch, onQuote }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, currentUser, index = 0, onNavigateToProfile, onNavigateToPost, onNavigateToCommunity, onClick, onSearch, onQuote }) => {
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(post.likes);
     const [repostCount, setRepostCount] = useState(post.reposts || 0);
@@ -282,14 +288,13 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
     const performRepost = async () => {
         if(auth.currentUser) {
             setRepostCount(prev => prev + 1);
-            await repostPost(post, CURRENT_USER); 
+            await repostPost(post, currentUser); 
             setShowRepostMenu(false);
         }
     }
 
     const performQuote = () => {
         if (onQuote) onQuote();
-        else alert("Quote feature is currently in development.");
         setShowRepostMenu(false);
     }
 
@@ -309,9 +314,6 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
         });
     };
 
-    // Alternating Backgrounds: Two different shades of black
-    // Post 1: Black (#000000)
-    // Post 2: Dark Gray/Black (#0c0c0c)
     const isEven = index % 2 === 0;
     const bgClass = isEven ? 'bg-black' : 'bg-[#0c0c0c]';
 
@@ -321,6 +323,23 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                 onClick={onClick}
                 className={`group relative p-4 cursor-pointer transition-colors ${bgClass}`}
             >
+                {/* Menus positioned relative to the card */}
+                {showOptions && (
+                    <div className="absolute top-10 right-2 z-50">
+                        <MoreMenu 
+                            onClose={() => setShowOptions(false)} 
+                            type="Post" 
+                            onReport={() => {
+                                setShowOptions(false);
+                                setShowReport(true);
+                            }}
+                            onBookmark={() => {
+                                setShowOptions(false);
+                            }}
+                        />
+                    </div>
+                )}
+
                 <div className="flex gap-3">
                     <div onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.user.id)}} className="shrink-0 cursor-pointer">
                         <img src={post.user.avatar} className="w-10 h-10 rounded-full border border-zinc-700 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
@@ -389,19 +408,42 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                                     <span className="text-[10px] text-zinc-500">@{post.quotedPost.user.handle.replace('@','')}</span>
                                 </div>
                                 <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                                {post.quotedPost.images && post.quotedPost.images.length > 0 && (
+                                    <div className="mt-2 h-24 w-full rounded-md overflow-hidden relative">
+                                        <img src={post.quotedPost.images[0]} className="w-full h-full object-cover" />
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex justify-between items-center mt-3 pt-1">
-                            {/* Left Group: Comment, Repost, Share */}
+                        <div className="flex justify-between items-center mt-3 pt-1 relative">
+                            {/* Left Group */}
                             <div className="flex items-center gap-5">
                                 <ActionButton icon={<MessageCircle size={18} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
-                                <ActionButton icon={<Repeat size={18} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
-                                <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                                <div className="relative">
+                                    <ActionButton icon={<Repeat size={18} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
+                                    {showRepostMenu && (
+                                        <div className="absolute top-8 left-0 z-50">
+                                            <RepostMenu 
+                                                onClose={() => setShowRepostMenu(false)}
+                                                onRepost={performRepost}
+                                                onQuote={performQuote}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                                    {showShare && (
+                                        <div className="absolute top-8 left-0 z-50">
+                                            <ShareSheet onClose={() => setShowShare(false)} postLink={`https://green.app/post/${post.id}`} />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Right Group: Fire (Like) */}
+                            {/* Right Group */}
                             <div className="flex items-center">
                                 <ActionButton icon={<Flame size={18} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
                             </div>
@@ -410,39 +452,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                 </div>
             </div>
 
-            {/* --- Modals & Menus --- */}
-            {showShare && (
-                <ShareSheet onClose={() => setShowShare(false)} postLink={`https://green.app/post/${post.id}`} />
-            )}
-
-            {showOptions && (
-                <MoreMenu 
-                    onClose={() => setShowOptions(false)} 
-                    type="Post" 
-                    onReport={() => {
-                        setShowOptions(false);
-                        setShowReport(true);
-                    }}
-                    onBookmark={() => {
-                        // Bookmark logic
-                        setShowOptions(false);
-                    }}
-                />
-            )}
-
             {showReport && (
                 <ReportModal 
                     type="Post" 
                     targetId={post.id} 
                     onClose={() => setShowReport(false)} 
-                />
-            )}
-
-            {showRepostMenu && (
-                <RepostMenu 
-                    onClose={() => setShowRepostMenu(false)}
-                    onRepost={performRepost}
-                    onQuote={performQuote}
                 />
             )}
         </>

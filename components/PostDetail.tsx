@@ -1,25 +1,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Heart, MessageCircle, Share2, MoreHorizontal, Image, Send, Zap, Flame, Repeat } from 'lucide-react';
-import { Post, Comment } from '../types';
-import { CURRENT_USER } from '../constants';
+import { Post, Comment, User } from '../types';
 import MediaViewer from './MediaViewer';
 import ReportModal from './ReportModal';
 import { MoreMenu, ShareSheet, RepostMenu } from './Menus';
 import { auth } from '../services/firebase';
 import { checkIsLiked, toggleLikePost, incrementView, incrementShare, repostPost, addComment, subscribeToComments } from '../services/dataService';
-import { subscribeToUserProfile } from '../services/userService';
 import { formatTimeShort } from '../utils';
 
 interface PostDetailProps {
     post: Post;
+    currentUser: User;
     onBack: () => void;
     onNavigateToProfile: (id: string) => void;
     onNavigateToCommunity?: (id: string) => void;
     onSearch: (tag: string) => void;
+    onQuote?: (post: Post) => void;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch, onQuote }) => {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isLiked, setIsLiked] = useState(false);
@@ -32,14 +32,9 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showRepostMenu, setShowRepostMenu] = useState(false);
-    const [currentUser, setCurrentUser] = useState(CURRENT_USER);
 
     useEffect(() => {
         if (auth.currentUser) {
-            subscribeToUserProfile(auth.currentUser.uid, (user) => {
-                if (user) setCurrentUser(user);
-            });
-            
             checkIsLiked(post.id, auth.currentUser.uid).then(setIsLiked);
             incrementView(post.id, auth.currentUser.uid);
         }
@@ -93,7 +88,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
     }
 
     const performQuote = () => {
-        alert("Quote feature is currently in development.");
+        if (onQuote) onQuote(post);
         setShowRepostMenu(false);
     }
 
@@ -125,31 +120,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                 />
             )}
 
-            {showShareSheet && (
-                <ShareSheet onClose={() => setShowShareSheet(false)} postLink={`https://green.app/post/${post.id}`} />
-            )}
-
-            {showMoreMenu && (
-                <MoreMenu 
-                    onClose={() => setShowMoreMenu(false)} 
-                    type="Post" 
-                    onReport={() => {
-                        setShowMoreMenu(false);
-                        setShowReportModal(true);
-                    }}
-                    onBookmark={handleBookmark}
-                    isBookmarked={bookmarked}
-                />
-            )}
-
-            {showRepostMenu && (
-                <RepostMenu 
-                    onClose={() => setShowRepostMenu(false)}
-                    onRepost={performRepost}
-                    onQuote={performQuote}
-                />
-            )}
-
             {/* Header */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-between p-3 border-b border-white/10">
                 <div className="flex items-center gap-4">
@@ -163,6 +133,23 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
             <div className="max-w-2xl mx-auto px-0 md:px-2 md:pt-4">
                 {/* Main Post Card */}
                 <div className="bg-black md:bg-zinc-900/20 backdrop-blur-sm md:rounded-[2rem] p-4 border-b md:border border-white/5 relative overflow-hidden mb-2">
+                    
+                    {/* Menu Positioned Inside Relative Container */}
+                    {showMoreMenu && (
+                        <div className="absolute top-10 right-2 z-50">
+                            <MoreMenu 
+                                onClose={() => setShowMoreMenu(false)} 
+                                type="Post" 
+                                onReport={() => {
+                                    setShowMoreMenu(false);
+                                    setShowReportModal(true);
+                                }}
+                                onBookmark={handleBookmark}
+                                isBookmarked={bookmarked}
+                            />
+                        </div>
+                    )}
+
                     <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
                             <img 
@@ -219,6 +206,25 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                             ))}
                         </div>
                     )}
+
+                    {post.quotedPost && (
+                        <div 
+                            onClick={(e) => { e.stopPropagation(); onNavigateToProfile(post.quotedPost!.user.id); }}
+                            className="mt-3 border border-white/10 rounded-lg p-3 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <img src={post.quotedPost.user.avatar} className="w-4 h-4 rounded-full" />
+                                <span className="text-xs font-bold text-white hover:underline">{post.quotedPost.user.name}</span>
+                                <span className="text-[10px] text-zinc-500">@{post.quotedPost.user.handle.replace('@','')}</span>
+                            </div>
+                            <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                            {post.quotedPost.images && post.quotedPost.images.length > 0 && (
+                                <div className="mt-2 h-24 w-full rounded-md overflow-hidden relative">
+                                    <img src={post.quotedPost.images[0]} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                        </div>
+                    )}
                     
                     {/* Timestamp & Metadata */}
                     <div className="text-zinc-500 text-xs mb-3 pb-3 border-b border-white/5 flex gap-2">
@@ -226,7 +232,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex justify-between items-center px-1">
+                    <div className="flex justify-between items-center px-1 relative">
                         <div className="flex items-center gap-6">
                             <ActionButton 
                                 icon={<MessageCircle size={20} />} 
@@ -234,20 +240,38 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                                 color="hover:text-blue-400" 
                                 bg="group-hover:bg-blue-500/10" 
                             />
-                            <ActionButton 
-                                icon={<Repeat size={20} />} 
-                                count={repostCount} 
-                                color="hover:text-green-500" 
-                                bg="group-hover:bg-green-500/10" 
-                                onClick={handleRepostClick}
-                            />
-                            <ActionButton 
-                                icon={<Share2 size={20} />} 
-                                count={shareCount}
-                                color="hover:text-blue-400" 
-                                bg="group-hover:bg-blue-500/10" 
-                                onClick={handleShare}
-                            />
+                            <div className="relative">
+                                <ActionButton 
+                                    icon={<Repeat size={20} />} 
+                                    count={repostCount} 
+                                    color="hover:text-green-500" 
+                                    bg="group-hover:bg-green-500/10" 
+                                    onClick={handleRepostClick}
+                                />
+                                {showRepostMenu && (
+                                    <div className="absolute top-8 left-0 z-50">
+                                        <RepostMenu 
+                                            onClose={() => setShowRepostMenu(false)}
+                                            onRepost={performRepost}
+                                            onQuote={performQuote}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <ActionButton 
+                                    icon={<Share2 size={20} />} 
+                                    count={shareCount}
+                                    color="hover:text-blue-400" 
+                                    bg="group-hover:bg-blue-500/10" 
+                                    onClick={handleShare}
+                                />
+                                {showShareSheet && (
+                                    <div className="absolute top-8 left-0 z-50">
+                                        <ShareSheet onClose={() => setShowShareSheet(false)} postLink={`https://green.app/post/${post.id}`} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center">
                             <ActionButton 
@@ -361,9 +385,23 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
                                      {comment.user.verified && <span className="text-gsn-green text-[8px]"><Zap size={8} fill="currentColor"/></span>}
                                      <span className="text-zinc-500 font-normal ml-1 text-[10px]">· {formatTimeShort(comment.timestamp)}</span>
                                  </div>
-                                 <button onClick={() => setShowMore(true)} className="opacity-0 group-hover/bubble:opacity-100 transition-opacity text-zinc-500 hover:text-white">
-                                     <MoreHorizontal size={12} />
-                                 </button>
+                                 <div className="relative">
+                                     <button onClick={() => setShowMore(true)} className="opacity-0 group-hover/bubble:opacity-100 transition-opacity text-zinc-500 hover:text-white">
+                                         <MoreHorizontal size={12} />
+                                     </button>
+                                     {showMore && (
+                                         <div className="absolute right-0 top-6 z-50">
+                                             <MoreMenu 
+                                                 onClose={() => setShowMore(false)} 
+                                                 type="Comment" 
+                                                 onReport={() => {
+                                                     setShowMore(false);
+                                                     setShowReportModal(true);
+                                                 }}
+                                             />
+                                         </div>
+                                     )}
+                                 </div>
                              </div>
                              <p className="text-xs md:text-sm text-zinc-200 leading-relaxed break-words whitespace-pre-wrap">{comment.text}</p>
                          </div>
@@ -407,17 +445,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
                      )}
                  </div>
             </div>
-            
-            {showMore && (
-                <MoreMenu 
-                    onClose={() => setShowMore(false)} 
-                    type="Comment" 
-                    onReport={() => {
-                        setShowMore(false);
-                        setShowReportModal(true);
-                    }}
-                />
-            )}
         </div>
     )
 }

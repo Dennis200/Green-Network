@@ -3,14 +3,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
     Image, X, MapPin, Smile, Hash, ChevronDown, 
     Users, Globe, Lock, ArrowLeft, Palette, 
-    Video, Play, Loader2, Sparkles, Plus
+    Video, Play, Loader2, Sparkles, Plus, Quote
 } from 'lucide-react';
 import { CURRENT_USER } from '../constants';
 import { createPost } from '../services/dataService';
 import { uploadToCloudinary } from '../services/cloudinary';
 import { auth } from '../services/firebase';
 import { subscribeToUserProfile } from '../services/userService';
-import { User } from '../types';
+import { User, Post } from '../types';
 
 const BACKGROUNDS = [
     { id: 'default', class: 'from-zinc-900 to-black', label: 'Noir' },
@@ -22,9 +22,10 @@ const BACKGROUNDS = [
 
 interface CreatePostProps {
     onBack?: () => void;
+    quotedPost?: Post;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ onBack }) => {
+const CreatePost: React.FC<CreatePostProps> = ({ onBack, quotedPost }) => {
     const [text, setText] = useState('');
     const [selectedBg, setSelectedBg] = useState(0); 
     const [mediaPreviews, setMediaPreviews] = useState<{url: string, file: File, type: 'image' | 'video'}[]>([]);
@@ -94,7 +95,8 @@ const CreatePost: React.FC<CreatePostProps> = ({ onBack }) => {
             await createPost({
                 content: text,
                 images: successfulUrls,
-                tags: tags as string[]
+                tags: tags as string[],
+                quotedPost: quotedPost
             }, currentUser);
 
             if (onBack) onBack();
@@ -125,9 +127,9 @@ const CreatePost: React.FC<CreatePostProps> = ({ onBack }) => {
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={handlePost}
-                        disabled={(!text && !hasMedia) || isPosting}
+                        disabled={(!text && !hasMedia && !quotedPost) || isPosting}
                         className={`px-6 py-2.5 rounded-full font-black text-sm tracking-wide transition-all shadow-lg flex items-center gap-2 ${
-                            (text || hasMedia) && !isPosting
+                            (text || hasMedia || quotedPost) && !isPosting
                             ? 'bg-white text-black hover:scale-105 active:scale-95 shadow-white/10' 
                             : 'bg-zinc-800/50 text-zinc-500 cursor-not-allowed'
                         }`}
@@ -145,7 +147,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onBack }) => {
                         ref={textareaRef}
                         value={text}
                         onChange={(e) => setText(e.target.value)}
-                        placeholder="What's sparking?"
+                        placeholder={quotedPost ? "Add a comment..." : "What's sparking?"}
                         className={`w-full bg-transparent text-white font-light placeholder-white/20 text-center resize-none outline-none leading-tight transition-all duration-300 drop-shadow-lg ${
                             text.length > 80 ? 'text-2xl md:text-4xl' : 'text-4xl md:text-6xl'
                         }`}
@@ -153,6 +155,23 @@ const CreatePost: React.FC<CreatePostProps> = ({ onBack }) => {
                         style={{ overflow: 'hidden' }}
                         autoFocus
                     />
+
+                    {/* Quoted Post Preview */}
+                    {quotedPost && (
+                        <div className="mt-8 bg-zinc-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 max-w-lg mx-auto w-full">
+                            <div className="flex items-center gap-2 mb-2">
+                                <img src={quotedPost.user.avatar} className="w-6 h-6 rounded-full border border-white/20" alt={quotedPost.user.name} />
+                                <span className="font-bold text-white text-sm">{quotedPost.user.name}</span>
+                                <span className="text-zinc-400 text-xs">@{quotedPost.user.handle}</span>
+                            </div>
+                            <p className="text-zinc-200 text-sm line-clamp-3">{quotedPost.content}</p>
+                            {quotedPost.images && quotedPost.images.length > 0 && (
+                                <div className="mt-3 h-32 rounded-lg overflow-hidden relative">
+                                    <img src={quotedPost.images[0]} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {hasMedia && (

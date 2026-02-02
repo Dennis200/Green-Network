@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Search, Plus, ArrowLeft, MessageSquare, Hash, MoreHorizontal, Megaphone, Lock, ChevronRight, X, Reply, Image as ImageIcon, Flame, Zap, Leaf, Settings, Trash2, LogOut, CheckCircle, Shield, Send, Mic, Info, Copy, Share, Calendar, MapPin, BarChart2 } from 'lucide-react';
+import { Users, Search, Plus, ArrowLeft, MessageSquare, Hash, MoreHorizontal, Megaphone, Lock, ChevronRight, X, Reply, Image as ImageIcon, Flame, Zap, Leaf, Settings, Trash2, LogOut, CheckCircle, Shield, Send, Mic, Info, Copy, Share, Calendar, MapPin, BarChart2, Globe } from 'lucide-react';
 import { MOCK_POSTS, CURRENT_USER, MOCK_USERS, MOCK_COMMUNITY_MESSAGES } from '../constants';
 import { Community, User, Message, CommunityEvent, Poll } from '../types';
 import { PostCard } from './Feed';
 import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import { createCommunity, subscribeToCommunities, createPost } from '../services/dataService';
+import PageGuide from './PageGuide';
 
 interface CommunitiesProps {
     onNavigateToProfile: (id: string) => void;
@@ -60,6 +61,15 @@ const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, 
 
     return (
         <div className="min-h-screen bg-black pb-20 md:pb-0 relative overflow-hidden">
+            <PageGuide 
+                pageKey="communities"
+                steps={[
+                    { title: "Your Tribe", description: "Find groups for hydroponics, local seshes, or genetic hunting.", icon: <Users size={20} /> },
+                    { title: "Channels", description: "Each community has focused channels for chat, events, and showcase.", icon: <Hash size={20} /> },
+                    { title: "Privacy", description: "Some groups are invite-only. Look for the lock icon.", icon: <Lock size={20} /> }
+                ]}
+            />
+
             {showCreateModal && (
                 <CreateCommunityModal 
                     onClose={() => setShowCreateModal(false)} 
@@ -383,12 +393,12 @@ const FeedView = ({ community, onNavigateToProfile }: { community: Community, on
 
             {/* Feed */}
             {posts.map((post: any) => (
-                <PostCard key={post.id} post={post} onNavigateToProfile={onNavigateToProfile} />
+                <PostCard key={post.id} post={post} currentUser={CURRENT_USER} onNavigateToProfile={onNavigateToProfile} />
             ))}
             
             {/* Mock Existing Posts from global if needed, mostly empty for now */}
             {MOCK_POSTS.filter(p => p.community?.id === community.id).map(post => (
-                 <PostCard key={post.id} post={post} onNavigateToProfile={onNavigateToProfile} />
+                 <PostCard key={post.id} post={post} currentUser={CURRENT_USER} onNavigateToProfile={onNavigateToProfile} />
             ))}
         </div>
     )

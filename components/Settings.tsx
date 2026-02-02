@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, User, Lock, Bell, Shield, Moon, Volume2, HelpCircle, LogOut, ChevronRight, Mail, Smartphone, Check, Eye, EyeOff, CheckCircle, Leaf, MessageCircle } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, Shield, Moon, Volume2, HelpCircle, LogOut, ChevronRight, Mail, Smartphone, Check, Eye, EyeOff, CheckCircle, Leaf, MessageCircle, RefreshCw } from 'lucide-react';
 
 interface SettingsProps {
     onBack: () => void;
@@ -16,6 +16,15 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout }) => {
     const [darkMode, setDarkMode] = useState(true);
     const [pushNotifs, setPushNotifs] = useState(true);
     const [emailNotifs, setEmailNotifs] = useState(true);
+
+    const handleResetTutorials = () => {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('guide_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        alert("Tutorials have been reset. They will appear again when you visit sections.");
+    };
 
     const renderContent = () => {
         switch(view) {
@@ -49,6 +58,7 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout }) => {
                         <SettingItem icon={<HelpCircle size={20} />} label="FAQ" onClick={() => alert("Opening FAQ...")} />
                         <SettingItem icon={<Mail size={20} />} label="Contact Support" onClick={() => alert("Opening support chat...")} />
                         <SettingItem icon={<Shield size={20} />} label="Community Guidelines" onClick={() => alert("Opening guidelines...")} />
+                        <SettingItem icon={<RefreshCw size={20} />} label="Reset Tutorials" onClick={handleResetTutorials} />
                     </SubPage>
                 );
             default:

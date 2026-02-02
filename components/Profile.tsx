@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag } from 'lucide-react';
+import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag, Eye, Edit } from 'lucide-react';
 import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT_USER } from '../constants';
 import { User, Vibe } from '../types';
 import MediaViewer from './MediaViewer';
@@ -10,6 +10,7 @@ import ReportModal from './ReportModal';
 import UserShop from './UserShop';
 import { checkIsFollowing, followUser, unfollowUser, subscribeToFollowStats } from '../services/dataService';
 import { auth } from '../services/firebase';
+import PageGuide from './PageGuide';
 
 interface ProfileProps {
     userId: string;
@@ -90,6 +91,17 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
 
   return (
     <div className="min-h-screen bg-black pb-32 relative overflow-x-hidden">
+        {isCurrentUser && (
+            <PageGuide 
+                pageKey="profile"
+                steps={[
+                    { title: "Your Profile", description: "This is how the community sees you. Customize your bio, cover image, and avatar.", icon: <Eye size={20} /> },
+                    { title: "Edit", description: "Use the edit button to update your details, social links, and Stoner Badge.", icon: <Edit size={20} /> },
+                    { title: "Content", description: "Your posts, reels, and shop listings are organized here.", icon: <Grid size={20} /> }
+                ]}
+            />
+        )}
+
         {viewingVibes && (
             <VibeViewer 
                 vibes={viewingVibes.vibes}
@@ -114,17 +126,6 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
             />
         )}
         
-        {showMoreMenu && (
-            <MoreMenu 
-                onClose={() => setShowMoreMenu(false)} 
-                type="User" 
-                onReport={() => {
-                    setShowMoreMenu(false);
-                    setShowReportModal(true);
-                }}
-            />
-        )}
-        
         {/* --- HERO SECTION --- */}
         <div className="relative w-full h-[50vh] min-h-[350px]">
             <img 
@@ -143,12 +144,26 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
                 >
                     <ArrowLeft size={24} />
                 </button>
-                <button 
-                    onClick={() => setShowMoreMenu(true)}
-                    className="p-3 rounded-full bg-black/20 hover:bg-white/10 backdrop-blur-md text-white transition-all"
-                >
-                    <MoreHorizontal size={24} />
-                </button>
+                <div className="relative">
+                    <button 
+                        onClick={() => setShowMoreMenu(true)}
+                        className="p-3 rounded-full bg-black/20 hover:bg-white/10 backdrop-blur-md text-white transition-all"
+                    >
+                        <MoreHorizontal size={24} />
+                    </button>
+                    {showMoreMenu && (
+                        <div className="absolute top-12 right-0 z-50">
+                            <MoreMenu 
+                                onClose={() => setShowMoreMenu(false)} 
+                                type="User" 
+                                onReport={() => {
+                                    setShowMoreMenu(false);
+                                    setShowReportModal(true);
+                                }}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
 

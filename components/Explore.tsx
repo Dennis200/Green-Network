@@ -5,6 +5,7 @@ import { PostCard } from './Feed';
 import { subscribeToPosts } from '../services/dataService';
 import { subscribeToAllUsers } from '../services/userService';
 import { Post, User } from '../types';
+import { CURRENT_USER } from '../constants';
 
 const Explore: React.FC<{ initialQuery?: string }> = ({ initialQuery }) => {
   const [activeTab, setActiveTab] = useState('For You');
@@ -184,6 +185,7 @@ const Explore: React.FC<{ initialQuery?: string }> = ({ initialQuery }) => {
                              <div key={post.id} className="bg-zinc-900/50 backdrop-blur-md rounded-3xl border border-white/5 overflow-hidden hover:border-white/10 transition-colors">
                                 <PostCard 
                                     post={post} 
+                                    currentUser={CURRENT_USER}
                                     onNavigateToProfile={() => {}} 
                                     onQuote={() => {}} 
                                     onSearch={(t) => setSearchQuery(t)}

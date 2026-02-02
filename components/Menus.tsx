@@ -1,17 +1,36 @@
 
 import React from 'react';
 import { Bookmark, Share2, Ban, Flag, Copy, Send, Camera, Instagram, Twitter, MessageSquare, Repeat, PenTool, Trash2 } from 'lucide-react';
-import { ActionSheet } from './ActionSheet';
 
 // --- Reusable Menu Components ---
+
+interface DropdownMenuProps {
+    children?: React.ReactNode;
+    onClose: () => void;
+    className?: string;
+}
+
+export const DropdownMenu = ({ children, onClose, className = "top-10 right-2" }: DropdownMenuProps) => (
+    <>
+        <div className="fixed inset-0 z-[40]" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+        <div 
+            className={`absolute z-[50] w-64 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right ${className}`}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="py-1.5">
+                {children}
+            </div>
+        </div>
+    </>
+);
 
 export const MenuButton = ({ 
     icon, 
     label, 
     subLabel, 
     onClick, 
-    color = "text-white", 
-    bg = "bg-zinc-800",
+    color = "text-zinc-400", 
+    hoverColor = "group-hover:text-white",
     danger = false 
 }: { 
     icon: React.ReactNode, 
@@ -19,129 +38,103 @@ export const MenuButton = ({
     subLabel?: string, 
     onClick: () => void, 
     color?: string, 
-    bg?: string,
+    hoverColor?: string,
     danger?: boolean
 }) => (
     <button 
-        onClick={onClick}
-        className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] ${danger ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-zinc-800 hover:bg-zinc-700'}`}
+        onClick={(e) => { e.stopPropagation(); onClick(); }}
+        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors group ${danger ? 'hover:bg-red-500/10' : 'hover:bg-white/5'}`}
     >
-        <div className={`${danger ? 'text-red-500' : color}`}>{icon}</div>
-        <div className="text-left">
-            <span className={`block font-bold text-base ${danger ? 'text-red-500' : 'text-white'}`}>{label}</span>
-            {subLabel && <span className="text-xs text-zinc-400 font-normal">{subLabel}</span>}
+        <div className={`${danger ? 'text-red-500' : color} ${!danger ? hoverColor : ''} transition-colors`}>{icon}</div>
+        <div className="flex-1">
+            <span className={`block text-sm font-bold ${danger ? 'text-red-500' : 'text-zinc-200 group-hover:text-white'}`}>{label}</span>
+            {subLabel && <span className="text-[10px] text-zinc-500">{subLabel}</span>}
         </div>
-    </button>
-);
-
-export const CancelButton = ({ onClick }: { onClick: () => void }) => (
-    <button 
-        onClick={onClick}
-        className="w-full py-4 mt-2 bg-black border border-zinc-800 rounded-2xl font-bold text-zinc-400 hover:text-white transition-colors active:bg-zinc-900"
-    >
-        Cancel
     </button>
 );
 
 // --- Specific Menus ---
 
 export const MoreMenu = ({ onClose, type, onReport, onBookmark, isBookmarked }: { onClose: () => void, type: string, onReport: () => void, onBookmark?: () => void, isBookmarked?: boolean }) => (
-    <ActionSheet onClose={onClose}>
-        <div className="space-y-2">
-            {onBookmark && (
-                <MenuButton 
-                    icon={<Bookmark size={22} fill={isBookmarked ? "currentColor" : "none"} />} 
-                    label={isBookmarked ? "Remove from Saved" : "Save"} 
-                    onClick={() => { onBookmark(); onClose(); }}
-                />
-            )}
-            
+    <DropdownMenu onClose={onClose}>
+        {onBookmark && (
             <MenuButton 
-                icon={<Share2 size={22} />} 
-                label="Share" 
-                onClick={() => {
-                    // Logic handled in parent usually, or we trigger ShareSheet
-                    // For now this is just an option in the More menu
-                    alert("Share triggered"); 
-                    onClose();
-                }} 
+                icon={<Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />} 
+                label={isBookmarked ? "Remove from Saved" : "Save Post"} 
+                onClick={() => { onBookmark(); onClose(); }}
             />
-            
-            {(type === 'User' || type === 'Chat') && (
-                <MenuButton 
-                    icon={<Ban size={22} />} 
-                    label="Block" 
-                    onClick={() => { alert("Block triggered"); onClose(); }} 
-                />
-            )}
+        )}
+        
+        <MenuButton 
+            icon={<Share2 size={18} />} 
+            label="Share via..." 
+            onClick={() => {
+                alert("Share triggered"); 
+                onClose();
+            }} 
+        />
+        
+        {(type === 'User' || type === 'Chat') && (
+            <MenuButton 
+                icon={<Ban size={18} />} 
+                label={`Block @${type === 'User' ? 'user' : 'chat'}`} 
+                onClick={() => { alert("Block triggered"); onClose(); }} 
+            />
+        )}
 
-            <MenuButton 
-                icon={<Flag size={22} />} 
-                label={`Report ${type}`} 
-                onClick={onReport} 
-                danger
-            />
-        </div>
-        <CancelButton onClick={onClose} />
-    </ActionSheet>
+        <div className="h-px bg-white/5 my-1" />
+
+        <MenuButton 
+            icon={<Flag size={18} />} 
+            label={`Report ${type}`} 
+            onClick={onReport} 
+            danger
+        />
+    </DropdownMenu>
 );
 
 export const ShareSheet = ({ onClose, postLink }: { onClose: () => void, postLink?: string }) => {
     const handleShare = async (platform: string) => {
         const text = `Check out this post on Green: ${postLink}`;
-        try {
-            if (navigator.share && platform === 'native') {
+        if (navigator.share && platform === 'native') {
+            try {
                 await navigator.share({ title: 'Green Stoners Network', text, url: postLink });
+            } catch (e) { console.error(e); }
+        } else {
+            if (postLink && platform === 'Copy') {
+                navigator.clipboard.writeText(postLink);
+                alert("Link copied!");
             } else {
-                alert(`Sharing to ${platform} simulated!\n${text}`);
+                alert(`Shared to ${platform}`);
             }
-        } catch (e) {
-            console.error(e);
         }
         onClose();
     };
 
     return (
-        <ActionSheet onClose={onClose} title="Share to...">
-            <div className="grid grid-cols-4 gap-4 mb-4">
-                <ShareOption icon={<Copy size={24} />} label="Copy" color="bg-zinc-800" onClick={() => { if(postLink) navigator.clipboard.writeText(postLink); alert("Copied!"); onClose(); }} />
-                <ShareOption icon={<Send size={24} />} label="DM" color="bg-gsn-green" iconColor="text-black" onClick={() => handleShare('DM')} />
-                <ShareOption icon={<Camera size={24} />} label="Story" color="bg-white" iconColor="text-black" onClick={() => handleShare('Vibe')} />
-                <ShareOption icon={<Instagram size={24} />} label="Stories" color="bg-gradient-to-tr from-yellow-500 to-purple-600" onClick={() => handleShare('Instagram')} />
-                <ShareOption icon={<Twitter size={24} />} label="X" color="bg-black border border-zinc-700" onClick={() => handleShare('X')} />
-                <ShareOption icon={<MessageSquare size={24} />} label="SMS" color="bg-green-500" onClick={() => handleShare('SMS')} />
-            </div>
-            <CancelButton onClick={onClose} />
-        </ActionSheet>
+        <DropdownMenu onClose={onClose} className="bottom-12 left-4 w-72 origin-bottom-left top-auto">
+            <div className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Share to</div>
+            <MenuButton icon={<Copy size={18} />} label="Copy Link" onClick={() => handleShare('Copy')} />
+            <MenuButton icon={<Send size={18} />} label="Send as Message" onClick={() => handleShare('DM')} />
+            <MenuButton icon={<Instagram size={18} />} label="Instagram Stories" onClick={() => handleShare('Instagram')} />
+            <MenuButton icon={<Twitter size={18} />} label="Post to X" onClick={() => handleShare('X')} />
+        </DropdownMenu>
     );
 };
 
-const ShareOption = ({ icon, label, color, iconColor = 'text-white', onClick }: { icon: React.ReactNode, label: string, color: string, iconColor?: string, onClick?: () => void }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-2">
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${color} ${iconColor} shadow-lg active:scale-90 transition-transform`}>
-            {icon}
-        </div>
-        <span className="text-xs font-bold text-zinc-400">{label}</span>
-    </button>
-);
-
 export const RepostMenu = ({ onClose, onRepost, onQuote }: { onClose: () => void, onRepost: () => void, onQuote: () => void }) => (
-    <ActionSheet onClose={onClose} title="Repost">
-        <div className="space-y-2">
-            <MenuButton 
-                icon={<Repeat size={24} className="text-green-500" />} 
-                label="Repost" 
-                subLabel="Instantly share to your feed"
-                onClick={onRepost}
-            />
-            
-            <MenuButton 
-                icon={<PenTool size={24} className="text-blue-400" />} 
-                label="Quote Post" 
-                subLabel="Add your own thoughts"
-                onClick={onQuote}
-            />
-        </div>
-        <CancelButton onClick={onClose} />
-    </ActionSheet>
+    <DropdownMenu onClose={onClose} className="bottom-12 left-0 origin-bottom-left top-auto">
+        <MenuButton 
+            icon={<Repeat size={18} className="text-green-500" />} 
+            label="Repost" 
+            subLabel="Instantly share to your feed"
+            onClick={onRepost}
+        />
+        <MenuButton 
+            icon={<PenTool size={18} className="text-blue-400" />} 
+            label="Quote Post" 
+            subLabel="Add your own thoughts"
+            onClick={onQuote}
+        />
+    </DropdownMenu>
 );
