@@ -8,30 +8,31 @@ interface ActionSheetProps {
 }
 
 export const ActionSheet: React.FC<ActionSheetProps> = ({ onClose, children, title }) => {
+    const [isVisible, setIsVisible] = useState(false);
     const [translateY, setTranslateY] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
-    const [isClosing, setIsClosing] = useState(false);
     const startY = useRef(0);
     const sheetRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // Lock body scroll to prevent background scrolling
         document.body.style.overflow = 'hidden';
+        
+        // Trigger enter animation
+        requestAnimationFrame(() => setIsVisible(true));
+        
         return () => {
             document.body.style.overflow = '';
         };
     }, []);
 
     const handleClose = () => {
-        setIsClosing(true);
+        setIsVisible(false);
         // Wait for animation to finish before calling parent onClose
         setTimeout(onClose, 300);
     };
 
     const handleTouchStart = (e: React.TouchEvent) => {
-        // Allow scrolling content if not at top
-        // But for this simple implementation, we assume handle drag mostly on header/empty space
-        // or if we strictly check scrollTop
         startY.current = e.touches[0].clientY;
         setIsDragging(true);
     };
@@ -43,7 +44,6 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({ onClose, children, tit
         
         // Only allow dragging down
         if (diff > 0) {
-            // Prevent default to stop scrolling if we are dragging the sheet
             if (e.cancelable) e.preventDefault(); 
             setTranslateY(diff);
         }
@@ -51,7 +51,7 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({ onClose, children, tit
 
     const handleTouchEnd = () => {
         setIsDragging(false);
-        // Threshold to close
+        // Threshold to close (dragged down by more than 100px)
         if (translateY > 100) {
             handleClose();
         } else {
@@ -60,27 +60,29 @@ export const ActionSheet: React.FC<ActionSheetProps> = ({ onClose, children, tit
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex justify-center items-end" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[9999] flex justify-center items-end" role="dialog" aria-modal="true">
             {/* Backdrop */}
             <div 
-                className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100'}`} 
+                className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`} 
                 onClick={handleClose}
             />
             
             {/* Sheet */}
             <div 
                 ref={sheetRef}
-                className={`w-full max-w-md bg-[#18181b] rounded-t-[2rem] border-t border-white/10 shadow-2xl relative z-10 p-6 pb-safe transition-transform duration-300 ease-out ${isClosing ? 'translate-y-full' : 'translate-y-0'}`}
+                className={`w-full max-w-md bg-zinc-900 rounded-t-[2rem] border-t border-white/10 shadow-2xl relative z-10 p-6 pb-12 transition-transform duration-300 ease-out`}
                 style={{ 
-                    transform: isClosing ? 'translateY(100%)' : `translateY(${translateY}px)`,
+                    transform: isVisible ? `translateY(${translateY}px)` : 'translateY(100%)',
                     transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)' 
                 }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
             >
                 {/* Drag Handle */}
-                <div className="w-full flex justify-center pt-0 pb-6 cursor-grab active:cursor-grabbing">
+                <div 
+                    className="w-full flex justify-center pt-0 pb-6 cursor-grab active:cursor-grabbing touch-none"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
                     <div className="w-12 h-1.5 bg-zinc-700 rounded-full opacity-50" />
                 </div>
 
