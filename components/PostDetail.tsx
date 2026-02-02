@@ -1,23 +1,25 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Heart, MessageCircle, RefreshCw, Share2, MoreHorizontal, Image, Smile, Send, ThumbsUp, PenTool, Flag, VolumeX, Ban, Copy, Link as LinkIcon, Instagram, Twitter, MessageSquare, X, Camera, Bookmark, Flame, Repeat } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Share2, MoreHorizontal, Image, Send, Zap, Flame, Repeat } from 'lucide-react';
 import { Post, Comment } from '../types';
 import { CURRENT_USER } from '../constants';
 import MediaViewer from './MediaViewer';
 import ReportModal from './ReportModal';
-import { MoreMenu, ShareSheet } from './Menus';
+import { MoreMenu, ShareSheet, RepostMenu } from './Menus';
 import { auth } from '../services/firebase';
 import { checkIsLiked, toggleLikePost, incrementView, incrementShare, repostPost, addComment, subscribeToComments } from '../services/dataService';
 import { subscribeToUserProfile } from '../services/userService';
+import { formatTimeShort } from '../utils';
 
 interface PostDetailProps {
     post: Post;
     onBack: () => void;
     onNavigateToProfile: (id: string) => void;
+    onNavigateToCommunity?: (id: string) => void;
     onSearch: (tag: string) => void;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfile, onSearch }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch }) => {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isLiked, setIsLiked] = useState(false);
@@ -29,6 +31,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
     const [showShareSheet, setShowShareSheet] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [showRepostMenu, setShowRepostMenu] = useState(false);
     const [currentUser, setCurrentUser] = useState(CURRENT_USER);
 
     useEffect(() => {
@@ -50,7 +53,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
 
     const handleLike = () => {
         if (!auth.currentUser) return;
-        // Optimistic UI
         const newStatus = !isLiked;
         setIsLiked(newStatus);
         setLikeCount(prev => newStatus ? prev + 1 : Math.max(0, prev - 1));
@@ -60,7 +62,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
 
     const handleBookmark = () => {
         setBookmarked(!bookmarked);
-        // Add service call for bookmarking if needed
     }
 
     const handlePostComment = async () => {
@@ -80,15 +81,22 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
         setShowShareSheet(true);
     }
 
-    const handleRepost = async () => {
-        if (!auth.currentUser) return;
-        if(confirm("Repost this to your feed?")) {
-            setRepostCount(prev => prev + 1);
-            await repostPost(post, currentUser);
-        }
+    const handleRepostClick = () => {
+        setShowRepostMenu(true);
     }
 
-    // Helper to render hashtags
+    const performRepost = async () => {
+        if (!auth.currentUser) return;
+        setRepostCount(prev => prev + 1);
+        await repostPost(post, currentUser);
+        setShowRepostMenu(false);
+    }
+
+    const performQuote = () => {
+        alert("Quote feature is currently in development.");
+        setShowRepostMenu(false);
+    }
+
     const renderContent = (content: string) => {
         const parts = content.split(/(#[a-zA-Z0-9_]+)/g);
         return parts.map((part, index) => {
@@ -134,6 +142,14 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                 />
             )}
 
+            {showRepostMenu && (
+                <RepostMenu 
+                    onClose={() => setShowRepostMenu(false)}
+                    onRepost={performRepost}
+                    onQuote={performQuote}
+                />
+            )}
+
             {/* Header */}
             <div className="sticky top-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-between p-4 border-b border-white/10">
                 <div className="flex items-center gap-4">
@@ -148,14 +164,35 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                 {/* Main Post Card */}
                 <div className="bg-zinc-900/20 backdrop-blur-sm rounded-[2rem] p-5 border border-white/[0.05] relative overflow-hidden mb-4">
                     <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => onNavigateToProfile(post.user.id)}>
-                            <img src={post.user.avatar} alt={post.user.name} className="w-12 h-12 rounded-full border border-white/10 object-cover" />
+                        <div className="flex items-center gap-3">
+                            <img 
+                                src={post.user.avatar} 
+                                alt={post.user.name} 
+                                className="w-12 h-12 rounded-full border border-white/10 object-cover cursor-pointer hover:opacity-80" 
+                                onClick={() => onNavigateToProfile(post.user.id)}
+                            />
                             <div>
-                                <h3 className="font-bold text-white text-lg leading-tight flex items-center gap-1">
+                                <h3 
+                                    className="font-bold text-white text-lg leading-tight flex items-center gap-1 cursor-pointer hover:underline"
+                                    onClick={() => onNavigateToProfile(post.user.id)}
+                                >
                                     {post.user.name}
-                                    {post.user.verified && <span className="text-gsn-green"><Flame size={12} fill="currentColor" /></span>}
+                                    {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
                                 </h3>
-                                <p className="text-zinc-500">{post.user.handle}</p>
+                                <div className="flex gap-1 items-center">
+                                    <p className="text-zinc-500 cursor-pointer hover:text-zinc-300" onClick={() => onNavigateToProfile(post.user.id)}>{post.user.handle}</p>
+                                    {post.community && (
+                                        <>
+                                            <span className="text-zinc-500 text-xs">· in</span>
+                                            <span 
+                                                className="text-zinc-400 text-xs font-bold cursor-pointer hover:text-gsn-green hover:underline"
+                                                onClick={() => onNavigateToCommunity?.(post.community!.id)}
+                                            >
+                                                {post.community.name}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <button onClick={() => setShowMoreMenu(true)} className="text-zinc-500 hover:text-white p-2 rounded-full hover:bg-zinc-800 transition-colors">
@@ -185,38 +222,40 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                     
                     {/* Timestamp & Metadata */}
                     <div className="text-zinc-500 text-sm mb-4 pb-4 border-b border-white/5 flex gap-2">
-                        <span>{post.timestamp}</span><span>·</span><span className="text-white font-bold">{post.views || 0} Views</span>
+                        <span>{formatTimeShort(post.timestamp)}</span><span>·</span><span className="text-white font-bold">{post.views || 0} Views</span>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex justify-between items-center px-2">
-                        <ActionButton 
-                            icon={<MessageCircle size={22} />} 
-                            count={comments.length} 
-                            color="hover:text-blue-400" 
-                            bg="group-hover:bg-blue-500/10" 
-                        />
-                        <ActionButton 
-                            icon={<Repeat size={22} />} 
-                            count={repostCount} 
-                            color="hover:text-green-500" 
-                            bg="group-hover:bg-green-500/10" 
-                            onClick={handleRepost}
-                        />
-                        <ActionButton 
-                            icon={<Heart size={22} fill={isLiked ? "currentColor" : "none"} />} 
-                            count={likeCount} 
-                            color={isLiked ? "text-pink-500" : "hover:text-pink-500"} 
-                            bg={isLiked ? "" : "group-hover:bg-pink-500/10"} 
-                            onClick={handleLike}
-                        />
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-4">
+                            <ActionButton 
+                                icon={<MessageCircle size={22} />} 
+                                count={comments.length} 
+                                color="hover:text-blue-400" 
+                                bg="group-hover:bg-blue-500/10" 
+                            />
+                            <ActionButton 
+                                icon={<Repeat size={22} />} 
+                                count={repostCount} 
+                                color="hover:text-green-500" 
+                                bg="group-hover:bg-green-500/10" 
+                                onClick={handleRepostClick}
+                            />
                             <ActionButton 
                                 icon={<Share2 size={22} />} 
                                 count={shareCount}
                                 color="hover:text-blue-400" 
                                 bg="group-hover:bg-blue-500/10" 
                                 onClick={handleShare}
+                            />
+                        </div>
+                        <div className="flex items-center">
+                            <ActionButton 
+                                icon={<Flame size={22} fill={isLiked ? "currentColor" : "none"} />} 
+                                count={likeCount} 
+                                color={isLiked ? "text-orange-500" : "hover:text-orange-500"} 
+                                bg={isLiked ? "" : "group-hover:bg-orange-500/10"} 
+                                onClick={handleLike}
                             />
                         </div>
                     </div>
@@ -271,7 +310,6 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
     );
 };
 
-// Helper Action Button Component (Local)
 const ActionButton = ({ icon, count, color, bg, onClick }: { icon: React.ReactNode, count?: number, color: string, bg: string, onClick?: (e: React.MouseEvent) => void }) => (
     <div className={`flex items-center gap-1 group/btn transition-colors cursor-pointer ${color}`} onClick={onClick}>
         <div className={`p-2 rounded-full transition-colors ${bg}`}>
@@ -320,8 +358,8 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
                              <div className="flex justify-between items-start gap-4 mb-1">
                                  <div onClick={() => onNavigateToProfile(comment.user.id)} className="font-bold text-sm text-white cursor-pointer hover:underline flex items-center gap-1">
                                      {comment.user.name}
-                                     {comment.user.verified && <span className="text-gsn-green text-[10px]"><Flame size={10} fill="currentColor"/></span>}
-                                     <span className="text-zinc-500 font-normal ml-1 text-xs">· {comment.timestamp}</span>
+                                     {comment.user.verified && <span className="text-gsn-green text-[10px]"><Zap size={10} fill="currentColor"/></span>}
+                                     <span className="text-zinc-500 font-normal ml-1 text-xs">· {formatTimeShort(comment.timestamp)}</span>
                                  </div>
                                  <button onClick={() => setShowMore(true)} className="opacity-0 group-hover/bubble:opacity-100 transition-opacity text-zinc-500 hover:text-white">
                                      <MoreHorizontal size={14} />

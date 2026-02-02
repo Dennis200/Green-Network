@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Share2, MoreHorizontal, Repeat, Leaf, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool } from 'lucide-react';
+import { MessageCircle, Share2, MoreHorizontal, Repeat, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool } from 'lucide-react';
 import { CURRENT_USER } from '../constants';
 import { Post, Vibe } from '../types';
 import VibeViewer from './VibeViewer';
@@ -8,6 +8,7 @@ import ReportModal from './ReportModal';
 import { ShareSheet, MoreMenu, RepostMenu } from './Menus';
 import { subscribeToPosts, toggleLikePost, subscribeToVibes, repostPost, incrementShare, checkIsLiked } from '../services/dataService';
 import { auth } from '../services/firebase';
+import { formatTimeShort } from '../utils';
 
 // Helper for Vibe grouping
 const getVibeGroups = (vibes: Vibe[]) => {
@@ -30,6 +31,7 @@ const getVibeGroups = (vibes: Vibe[]) => {
 interface FeedProps {
     onNavigateToProfile: (id: string) => void;
     onNavigateToPost?: (id: string) => void;
+    onNavigateToCommunity?: (id: string) => void;
     onSearch: (query: string) => void;
     onNavigateToCreateStory: () => void;
     onNavigateToMessages: () => void;
@@ -41,6 +43,7 @@ interface FeedProps {
 const Feed: React.FC<FeedProps> = ({ 
     onNavigateToProfile, 
     onNavigateToPost, 
+    onNavigateToCommunity,
     onSearch, 
     onNavigateToCreateStory, 
     headerVisible = true,
@@ -104,11 +107,11 @@ const Feed: React.FC<FeedProps> = ({
                 transition: 'transform 0.3s cubic-bezier(0,0,0.2,1)'
             }}>
                 {/* VIBES Rail */}
-                <div className="pt-4 pb-0 md:pt-6">
-                    <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-4">
+                <div className="pt-4 pb-4 md:pt-6 bg-black border-b border-white/5">
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
                         <div 
                             onClick={onNavigateToCreateStory}
-                            className="min-w-[100px] w-[100px] h-[160px] rounded-2xl overflow-hidden relative cursor-pointer group bg-zinc-900/50 shrink-0 border border-white/5 hover:border-gsn-green/30 transition-all"
+                            className="min-w-[100px] w-[100px] h-[160px] rounded-[1.5rem] overflow-hidden relative cursor-pointer group bg-zinc-900/50 shrink-0 border border-white/5 hover:border-gsn-green/30 transition-all"
                         >
                             <img src={CURRENT_USER.avatar} alt="Me" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-50 grayscale group-hover:grayscale-0" />
                             <div className="absolute inset-0 flex flex-col items-center justify-end pb-3">
@@ -123,7 +126,7 @@ const Feed: React.FC<FeedProps> = ({
                             <div 
                                 key={group.user.id} 
                                 onClick={() => handleOpenVibe(group.vibes)}
-                                className="min-w-[100px] w-[100px] h-[160px] rounded-2xl overflow-hidden relative cursor-pointer group bg-zinc-900 shrink-0 border border-white/20 transition-all"
+                                className="min-w-[100px] w-[100px] h-[160px] rounded-[1.5rem] overflow-hidden relative cursor-pointer group bg-zinc-900 shrink-0 border border-white/20 transition-all"
                             >
                                 <img src={group.latestVibe.media} alt={group.user.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90"></div>
@@ -137,7 +140,7 @@ const Feed: React.FC<FeedProps> = ({
                 </div>
 
                 {/* Posts Feed */}
-                <div className="max-w-xl mx-auto md:py-2 space-y-2">
+                <div className="w-full max-w-2xl mx-auto">
                     {posts.length === 0 ? (
                         <div className="text-center py-20 text-zinc-500">
                             <RefreshCw className="animate-spin mx-auto mb-4" />
@@ -148,7 +151,10 @@ const Feed: React.FC<FeedProps> = ({
                             <React.Fragment key={post.id}>
                                 <PostCard 
                                     post={post} 
+                                    index={index}
                                     onNavigateToProfile={onNavigateToProfile}
+                                    onNavigateToCommunity={onNavigateToCommunity}
+                                    onNavigateToPost={onNavigateToPost}
                                     onClick={() => onNavigateToPost?.(post.id)}
                                     onSearch={onSearch}
                                 />
@@ -164,13 +170,16 @@ const Feed: React.FC<FeedProps> = ({
 // ... PostCard and sub-components ...
 interface PostCardProps {
     post: Post;
+    index?: number;
     onNavigateToProfile: (id: string) => void;
+    onNavigateToPost?: (id: string) => void;
+    onNavigateToCommunity?: (id: string) => void;
     onClick?: () => void;
     onSearch?: (tag: string) => void;
     onQuote?: () => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, onClick, onSearch, onQuote }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateToProfile, onNavigateToPost, onNavigateToCommunity, onClick, onSearch, onQuote }) => {
     const [liked, setLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(post.likes);
     const [repostCount, setRepostCount] = useState(post.reposts || 0);
@@ -237,36 +246,69 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, o
         });
     };
 
+    // Alternating Backgrounds: Two different shades of black
+    // Post 1: Black (#000000)
+    // Post 2: Dark Gray/Black (#0c0c0c)
+    const isEven = index % 2 === 0;
+    const bgClass = isEven ? 'bg-black' : 'bg-[#0c0c0c]';
+
     return (
         <>
             <div 
                 onClick={onClick}
-                className="group relative bg-zinc-900/20 backdrop-blur-sm rounded-[2rem] p-4 cursor-pointer hover:bg-white/[0.02] transition-colors mx-2 border border-white/[0.02]"
+                className={`group relative p-5 cursor-pointer transition-colors ${bgClass}`}
             >
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     <div onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.user.id)}} className="shrink-0 cursor-pointer">
-                        <img src={post.user.avatar} className="w-11 h-11 rounded-full border border-zinc-800 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
+                        <img src={post.user.avatar} className="w-12 h-12 rounded-full border border-zinc-700 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
                     </div>
                     
                     <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                <span className="font-bold text-white text-[15px] hover:underline cursor-pointer">{post.user.name}</span>
-                                {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
-                                <span className="text-zinc-500 text-sm">@{post.user.handle.replace('@','')}</span>
-                                <span className="text-zinc-600 text-xs">· {post.timestamp}</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span 
+                                        onClick={(e) => { e.stopPropagation(); onNavigateToProfile(post.user.id); }}
+                                        className="font-bold text-white text-[15px] hover:underline cursor-pointer"
+                                    >
+                                        {post.user.name}
+                                    </span>
+                                    {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
+                                    
+                                    {post.community && (
+                                        <>
+                                            <span className="text-zinc-500 text-xs">in</span>
+                                            <span 
+                                                onClick={(e) => { e.stopPropagation(); onNavigateToCommunity?.(post.community!.id); }}
+                                                className="font-bold text-zinc-300 text-[13px] hover:text-gsn-green hover:underline cursor-pointer"
+                                            >
+                                                {post.community.name}
+                                            </span>
+                                        </>
+                                    )}
+
+                                    <span className="text-zinc-600 text-xs">· {formatTimeShort(post.timestamp)}</span>
+                                </div>
+                                <span 
+                                    onClick={(e) => { e.stopPropagation(); onNavigateToProfile(post.user.id); }}
+                                    className="text-zinc-500 text-xs hover:text-zinc-400 cursor-pointer"
+                                >
+                                    @{post.user.handle.replace('@','')}
+                                </span>
                             </div>
                             <button onClick={handleOptionsClick} className="text-zinc-600 hover:text-white p-1 -mr-2 rounded-full hover:bg-zinc-800 transition-colors">
-                                <MoreHorizontal size={18} />
+                                <MoreHorizontal size={20} />
                             </button>
                         </div>
 
-                        <p className="text-white text-[15px] whitespace-pre-wrap leading-relaxed">{renderContent(post.content)}</p>
+                        <div className="mt-3 text-[15px] text-zinc-100 whitespace-pre-wrap leading-relaxed">
+                            {renderContent(post.content)}
+                        </div>
 
                         {post.images && post.images.length > 0 && (
-                            <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+                            <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
                                 {post.images.map((img, i) => (
-                                    <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-2xl border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-64'}`}>
+                                    <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-xl border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-auto max-h-[500px]'}`}>
                                         <img src={img} className="h-full w-full object-cover" alt="Post media" />
                                     </div>
                                 ))}
@@ -274,28 +316,31 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, o
                         )}
 
                         {post.quotedPost && (
-                            <div className="mt-3 border border-white/10 rounded-2xl p-3 bg-white/5">
-                                <div className="flex items-center gap-2 mb-1">
+                            <div 
+                                onClick={(e) => { e.stopPropagation(); onNavigateToPost?.(post.quotedPost!.id); }}
+                                className="mt-4 border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                            >
+                                <div className="flex items-center gap-2 mb-2">
                                     <img src={post.quotedPost.user.avatar} className="w-5 h-5 rounded-full" />
-                                    <span className="text-xs font-bold text-white">{post.quotedPost.user.name}</span>
+                                    <span className="text-xs font-bold text-white hover:underline" onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.quotedPost!.user.id)}}>{post.quotedPost.user.name}</span>
+                                    <span className="text-xs text-zinc-500">@{post.quotedPost.user.handle.replace('@','')}</span>
                                 </div>
-                                <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                                <p className="text-sm text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
                             </div>
                         )}
 
-                        <div className="flex justify-between items-center mt-3 max-w-md pr-2 text-zinc-500">
-                            {/* Comment Button (propagates click to open detail) */}
-                            <ActionButton icon={<MessageCircle size={18} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
-                            
-                            {/* Repost Button */}
-                            <ActionButton icon={<Repeat size={18} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
-                            
-                            {/* Like Button */}
-                            <ActionButton icon={<Flame size={18} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
-                            
-                            {/* Share Button */}
-                            <div className="flex gap-1">
-                                <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                        {/* Action Buttons */}
+                        <div className="flex justify-between items-center mt-4 pt-2">
+                            {/* Left Group: Comment, Repost, Share */}
+                            <div className="flex items-center gap-6">
+                                <ActionButton icon={<MessageCircle size={20} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
+                                <ActionButton icon={<Repeat size={20} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
+                                <ActionButton icon={<Share2 size={20} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                            </div>
+
+                            {/* Right Group: Fire (Like) */}
+                            <div className="flex items-center">
+                                <ActionButton icon={<Flame size={20} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
                             </div>
                         </div>
                     </div>
@@ -342,8 +387,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onNavigateToProfile, o
 };
 
 const ActionButton = ({ icon, count, color, bg, onClick }: any) => (
-    <div className={`flex items-center gap-1 group/btn transition-colors ${color}`} onClick={onClick}>
-        <div className={`p-2 rounded-full transition-colors ${bg}`}>{icon}</div>
+    <div className={`flex items-center gap-1.5 group/btn transition-colors text-zinc-500 cursor-pointer ${color}`} onClick={onClick}>
+        <div className={`p-2 rounded-full transition-colors ${bg} -ml-2`}>{icon}</div>
         {count !== undefined && <span className="text-xs font-medium">{count}</span>}
     </div>
 );

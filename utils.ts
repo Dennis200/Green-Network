@@ -47,3 +47,30 @@ export const calculateAdCost = (days: number): { amount: number, display: string
         display: formatCurrency(localAmount)
     };
 };
+
+export const formatTimeShort = (timestamp: string) => {
+    if (!timestamp) return '';
+    
+    // Check if it's already a short string (mock data compatibility)
+    if (/^\d+[smhd]$/.test(timestamp)) return timestamp;
+
+    const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return timestamp; // Fallback if invalid date
+
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${Math.max(0, diffInSeconds)}s`;
+    
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d`;
+
+    // Return exact date for older posts
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};

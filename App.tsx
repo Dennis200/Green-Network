@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Leaf, Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio } from 'lucide-react';
+import { Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './services/firebase';
 import { subscribeToUserProfile, createUserProfile, userProfileExists } from './services/userService';
@@ -29,6 +29,12 @@ import WalletPage from './components/Wallet';
 import SavedPage from './components/Saved';
 import { CURRENT_USER, MOCK_POSTS } from './constants';
 import { OnboardingTour } from './components/OnboardingTour';
+
+// ... RightSideMenu and SideMenu components remain the same ...
+// Including them here for context in the full file return would be huge, 
+// so I'll reuse the existing ones implicitly by focusing on the App component changes unless full replacement is needed.
+// However, I need to output the full file content. 
+// I will include the unchanged parts to ensure file integrity.
 
 // --- RIGHT SIDE MENU (BURGER MENU) ---
 const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: { isOpen: boolean; onClose: () => void; onNavigate: (view: ViewState) => void, unreadMsg: number, unreadNotif: number }) => {
@@ -134,13 +140,15 @@ const SideMenu = ({ isOpen, onClose, user, onNavigate, onLogout }: { isOpen: boo
     };
 
     return (
-        <>
+        <div className={`fixed inset-0 z-[80] md:hidden ${isOpen ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+            {/* Backdrop */}
             <div 
-                className={`fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm transition-opacity duration-300 md:hidden ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
                 onClick={onClose}
             />
+            {/* Menu */}
             <div 
-                className={`fixed inset-y-0 left-0 z-[90] w-[85%] max-w-[340px] bg-black border-r border-white/10 shadow-2xl transform transition-transform duration-300 ease-out md:hidden flex flex-col`}
+                className={`fixed inset-y-0 left-0 w-[85%] max-w-[340px] bg-black border-r border-white/10 shadow-2xl transform transition-transform duration-300 ease-out flex flex-col`}
                 style={{ transform: isOpen ? `translateX(${currentX}px)` : 'translateX(-100%)' }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
@@ -188,7 +196,7 @@ const SideMenu = ({ isOpen, onClose, user, onNavigate, onLogout }: { isOpen: boo
                     </button>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
@@ -209,6 +217,7 @@ export default function App() {
   const [activeUser, setActiveUser] = useState<string | null>(null); // ID of user being viewed
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER); // Logged in user state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   
   // Navigation State
   const [showLeftMenu, setShowLeftMenu] = useState(false);
@@ -375,6 +384,7 @@ export default function App() {
             <Feed 
                 onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} 
                 onNavigateToPost={(id) => { setSelectedPostId(id); setView(ViewState.POST_DETAILS); }}
+                onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }}
                 onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }}
                 onNavigateToCreateStory={() => setView(ViewState.CREATE_VIBE)}
                 onNavigateToMessages={() => setView(ViewState.CHAT)}
@@ -437,11 +447,11 @@ export default function App() {
       case ViewState.POST_DETAILS:
         const post = MOCK_POSTS.find(p => p.id === selectedPostId);
         if (!post) return <Feed onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} />;
-        return <PostDetail post={post} onBack={() => setView(ViewState.FEED)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} />;
+        return <PostDetail post={post} onBack={() => setView(ViewState.FEED)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }} onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} />;
       case ViewState.NOTIFICATIONS:
         return <Notifications onBack={() => setView(ViewState.FEED)} headerVisible={headerVisible} onSettings={() => setView(ViewState.SETTINGS)} />;
       case ViewState.COMMUNITIES:
-        return <Communities onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onBack={() => setView(ViewState.FEED)} headerVisible={false} />;
+        return <Communities onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onBack={() => setView(ViewState.FEED)} headerVisible={false} initialCommunityId={selectedCommunityId} />;
       case ViewState.ADMIN:
         return <AdminDashboard onBack={() => setView(ViewState.FEED)} />;
       case ViewState.ADS_MANAGER:
@@ -486,7 +496,7 @@ export default function App() {
         <div>
             {/* Logo */}
             <div onClick={() => setView(ViewState.FEED)} className="flex items-center gap-3 px-4 mb-8 cursor-pointer group">
-                <Leaf className="text-gsn-green w-8 h-8 group-hover:scale-110 transition-transform" />
+                <span className="material-symbols-outlined text-gsn-green text-4xl group-hover:scale-110 transition-transform">cannabis</span>
                 <span className="font-black text-2xl tracking-tighter hidden xl:block">GREEN</span>
             </div>
 

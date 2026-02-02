@@ -12,9 +12,10 @@ interface CommunitiesProps {
     onNavigateToProfile: (id: string) => void;
     onBack?: () => void;
     headerVisible?: boolean;
+    initialCommunityId?: string | null;
 }
 
-const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, headerVisible = true }) => {
+const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, headerVisible = true, initialCommunityId }) => {
     const [activeCommunity, setActiveCommunity] = useState<Community | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -28,6 +29,14 @@ const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, 
         });
         return () => unsubscribe();
     }, []);
+
+    // Effect to handle deep link to community
+    useEffect(() => {
+        if (initialCommunityId && communities.length > 0) {
+            const target = communities.find(c => c.id === initialCommunityId);
+            if (target) setActiveCommunity(target);
+        }
+    }, [initialCommunityId, communities]);
 
     const handleCreateCommunity = async (newCommunity: Community) => {
         setShowCreateModal(false);
@@ -146,7 +155,7 @@ const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, 
 // --- Create Community Modal ---
 const CreateCommunityModal = ({ onClose, onCreate }: { onClose: () => void, onCreate: (c: Community) => void }) => {
     // ... Existing implementation ...
-    // Placeholder to keep file concise, assuming previous logic holds
+    // Placeholder to keep file concise
     return null; 
 }
 
@@ -190,7 +199,7 @@ const CommunityDetail: React.FC<CommunityDetailProps> = ({ community, onBack, on
     return (
         <div className="min-h-screen bg-black flex flex-col relative overflow-x-hidden">
             
-            {/* Header Hero (Same as before) */}
+            {/* Header Hero */}
             <div className="relative h-[30vh] min-h-[250px] w-full shrink-0">
                 <img src={community.coverImage} className="w-full h-full object-cover" alt="Cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>

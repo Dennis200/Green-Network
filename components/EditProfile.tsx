@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Camera, Leaf, Save, X, GraduationCap, Briefcase, Globe, Music, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Camera, Save, X, GraduationCap, Briefcase, Globe, Music, ExternalLink } from 'lucide-react';
 import { User } from '../types';
 import { updateUserProfile } from '../services/userService';
 import { uploadToCloudinary } from '../services/cloudinary';
@@ -97,8 +97,8 @@ const EditProfile: React.FC<EditProfileProps> = ({ user, onUpdate, onCancel }) =
                         </div>
                         {/* Preview Badge */}
                         {showBadge && (
-                             <div className="absolute bottom-0 right-0 bg-gsn-black rounded-full p-1 border border-gsn-green shadow-[0_0_10px_rgba(74,222,128,0.5)]">
-                                <Leaf size={14} className="text-gsn-green" fill="currentColor" />
+                             <div className="absolute bottom-0 right-0 bg-gsn-black rounded-full p-1 border border-gsn-green shadow-[0_0_10px_rgba(74,222,128,0.5)] flex items-center justify-center">
+                                <span className="material-symbols-outlined text-gsn-green text-sm">cannabis</span>
                             </div>
                         )}
                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
@@ -143,7 +143,7 @@ const EditProfile: React.FC<EditProfileProps> = ({ user, onUpdate, onCancel }) =
                 <div className="bg-zinc-900/50 border border-white/10 rounded-xl p-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gsn-green/10 flex items-center justify-center border border-gsn-green/30">
-                            <Leaf size={20} className="text-gsn-green" />
+                            <span className="material-symbols-outlined text-gsn-green text-xl">cannabis</span>
                         </div>
                         <div>
                             <h3 className="font-bold text-white text-sm">Stoner Badge</h3>

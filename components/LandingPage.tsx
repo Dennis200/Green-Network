@@ -80,7 +80,7 @@ const PublicHeader = ({ onNavigate, currentView, isAuthenticated, onEnterApp }: 
     <nav className="fixed top-0 left-0 right-0 z-50 mix-blend-difference py-6 px-6 transition-all duration-300">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
             <button onClick={() => onNavigate('HOME')} className="flex items-center gap-2 group">
-                <Leaf className="w-6 h-6 text-white" />
+                <span className="material-symbols-outlined text-white text-3xl">cannabis</span>
                 <span className="text-xl font-bold tracking-tighter text-white">GREEN</span>
             </button>
             
@@ -122,7 +122,7 @@ const PublicFooter = ({ onNavigate }: { onNavigate: (v: PublicView) => void }) =
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-12 mb-16">
                     <div className="lg:col-span-2 space-y-6">
                         <div className="flex items-center gap-2">
-                            <Leaf className="w-6 h-6 text-white" />
+                            <span className="material-symbols-outlined text-white text-3xl">cannabis</span>
                             <span className="text-2xl font-bold text-white tracking-tighter">GREEN</span>
                         </div>
                         <p className="text-zinc-500 text-sm leading-relaxed max-w-xs">

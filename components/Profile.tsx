@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, Leaf, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag } from 'lucide-react';
+import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag } from 'lucide-react';
 import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT_USER } from '../constants';
 import { User, Vibe } from '../types';
 import MediaViewer from './MediaViewer';
@@ -166,8 +166,8 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
                         <img src={user.avatar} alt="Profile" className="w-full h-full rounded-[2.2rem] object-cover" />
                     </div>
                     {user.showStonerBadge && (
-                        <div className="absolute -bottom-2 -right-2 z-20 bg-black rounded-full p-3 border-[5px] border-black shadow-lg">
-                            <Leaf size={28} className="text-gsn-green fill-gsn-green animate-pulse-slow" />
+                        <div className="absolute -bottom-2 -right-2 z-20 bg-black rounded-full p-2 border-[5px] border-black shadow-lg flex items-center justify-center">
+                            <span className="material-symbols-outlined text-gsn-green text-3xl animate-pulse-slow">cannabis</span>
                         </div>
                     )}
                 </div>

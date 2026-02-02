@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Leaf, Search, Menu } from 'lucide-react';
+import { Search, Menu } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderProps {
@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ user, onOpenSidebar, onOpenRightMenu, o
              <div className="flex justify-between items-center px-4 h-16">
                 {/* Left: Logo (Triggers Sidebar) */}
                 <button onClick={onOpenSidebar} className="flex items-center gap-2 group">
-                    <Leaf className="text-gsn-green w-7 h-7 fill-gsn-green/20" />
+                    <span className="material-symbols-outlined text-gsn-green text-3xl">cannabis</span>
                     <span className="font-black text-xl tracking-tighter text-white">GREEN</span>
                 </button>
 
