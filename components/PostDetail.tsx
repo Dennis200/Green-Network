@@ -151,39 +151,39 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
             )}
 
             {/* Header */}
-            <div className="sticky top-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-between p-4 border-b border-white/10">
+            <div className="sticky top-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-between p-3 border-b border-white/10">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 rounded-full hover:bg-white/10 transition-colors">
                         <ArrowLeft size={20} className="text-white" />
                     </button>
-                    <h2 className="text-xl font-bold text-white">Post</h2>
+                    <h2 className="text-lg font-bold text-white">Post</h2>
                 </div>
             </div>
 
-            <div className="max-w-2xl mx-auto px-2 pt-4">
+            <div className="max-w-2xl mx-auto px-0 md:px-2 md:pt-4">
                 {/* Main Post Card */}
-                <div className="bg-zinc-900/20 backdrop-blur-sm rounded-[2rem] p-5 border border-white/[0.05] relative overflow-hidden mb-4">
-                    <div className="flex justify-between items-start mb-4">
+                <div className="bg-black md:bg-zinc-900/20 backdrop-blur-sm md:rounded-[2rem] p-4 border-b md:border border-white/5 relative overflow-hidden mb-2">
+                    <div className="flex justify-between items-start mb-3">
                         <div className="flex items-center gap-3">
                             <img 
                                 src={post.user.avatar} 
                                 alt={post.user.name} 
-                                className="w-12 h-12 rounded-full border border-white/10 object-cover cursor-pointer hover:opacity-80" 
+                                className="w-10 h-10 rounded-full border border-white/10 object-cover cursor-pointer hover:opacity-80" 
                                 onClick={() => onNavigateToProfile(post.user.id)}
                             />
                             <div>
                                 <h3 
-                                    className="font-bold text-white text-lg leading-tight flex items-center gap-1 cursor-pointer hover:underline"
+                                    className="font-bold text-white text-base leading-tight flex items-center gap-1 cursor-pointer hover:underline"
                                     onClick={() => onNavigateToProfile(post.user.id)}
                                 >
                                     {post.user.name}
                                     {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
                                 </h3>
                                 <div className="flex gap-1 items-center">
-                                    <p className="text-zinc-500 cursor-pointer hover:text-zinc-300" onClick={() => onNavigateToProfile(post.user.id)}>{post.user.handle}</p>
+                                    <p className="text-zinc-500 cursor-pointer hover:text-zinc-300 text-xs" onClick={() => onNavigateToProfile(post.user.id)}>{post.user.handle}</p>
                                     {post.community && (
                                         <>
-                                            <span className="text-zinc-500 text-xs">· in</span>
+                                            <span className="text-zinc-500 text-[10px]">· in</span>
                                             <span 
                                                 className="text-zinc-400 text-xs font-bold cursor-pointer hover:text-gsn-green hover:underline"
                                                 onClick={() => onNavigateToCommunity?.(post.community!.id)}
@@ -201,13 +201,13 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                     </div>
 
                     {/* Content */}
-                    <div className="text-xl text-white mb-4 whitespace-pre-wrap leading-relaxed">
+                    <div className="text-base text-white mb-3 whitespace-pre-wrap leading-relaxed">
                         {renderContent(post.content)}
                     </div>
 
                     {/* Media */}
                     {post.images && post.images.length > 0 && (
-                        <div className={`mb-4 rounded-2xl overflow-hidden border border-white/5 ${post.images.length > 1 ? 'grid grid-cols-2 gap-1' : ''}`}>
+                        <div className={`mb-3 rounded-xl overflow-hidden border border-white/5 ${post.images.length > 1 ? 'grid grid-cols-2 gap-1' : ''}`}>
                             {post.images.map((img, i) => (
                                 <img 
                                     key={i} 
@@ -221,28 +221,28 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                     )}
                     
                     {/* Timestamp & Metadata */}
-                    <div className="text-zinc-500 text-sm mb-4 pb-4 border-b border-white/5 flex gap-2">
+                    <div className="text-zinc-500 text-xs mb-3 pb-3 border-b border-white/5 flex gap-2">
                         <span>{formatTimeShort(post.timestamp)}</span><span>·</span><span className="text-white font-bold">{post.views || 0} Views</span>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex justify-between items-center px-2">
-                        <div className="flex items-center gap-4">
+                    <div className="flex justify-between items-center px-1">
+                        <div className="flex items-center gap-6">
                             <ActionButton 
-                                icon={<MessageCircle size={22} />} 
+                                icon={<MessageCircle size={20} />} 
                                 count={comments.length} 
                                 color="hover:text-blue-400" 
                                 bg="group-hover:bg-blue-500/10" 
                             />
                             <ActionButton 
-                                icon={<Repeat size={22} />} 
+                                icon={<Repeat size={20} />} 
                                 count={repostCount} 
                                 color="hover:text-green-500" 
                                 bg="group-hover:bg-green-500/10" 
                                 onClick={handleRepostClick}
                             />
                             <ActionButton 
-                                icon={<Share2 size={22} />} 
+                                icon={<Share2 size={20} />} 
                                 count={shareCount}
                                 color="hover:text-blue-400" 
                                 bg="group-hover:bg-blue-500/10" 
@@ -251,7 +251,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                         </div>
                         <div className="flex items-center">
                             <ActionButton 
-                                icon={<Flame size={22} fill={isLiked ? "currentColor" : "none"} />} 
+                                icon={<Flame size={20} fill={isLiked ? "currentColor" : "none"} />} 
                                 count={likeCount} 
                                 color={isLiked ? "text-orange-500" : "hover:text-orange-500"} 
                                 bg={isLiked ? "" : "group-hover:bg-orange-500/10"} 
@@ -262,26 +262,26 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                 </div>
 
                 {/* Comment Input Area */}
-                <div className="p-2 mb-4">
+                <div className="p-3 mb-2 border-b border-white/5">
                     <div className="flex gap-3 items-start">
-                        <img src={currentUser.avatar} alt="Me" className="w-10 h-10 rounded-full flex-shrink-0 border border-white/10" />
+                        <img src={currentUser.avatar} alt="Me" className="w-8 h-8 rounded-full flex-shrink-0 border border-white/10" />
                         <div className="flex-1">
-                            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl flex items-center px-4 py-3 focus-within:border-gsn-green transition-colors">
+                            <div className="bg-zinc-900 border border-zinc-800 rounded-xl flex items-center px-3 py-2 focus-within:border-gsn-green transition-colors">
                                 <input 
                                     value={newComment}
                                     onChange={(e) => setNewComment(e.target.value)}
                                     placeholder="Write a comment..." 
-                                    className="bg-transparent flex-1 text-base text-white focus:outline-none placeholder-zinc-500 min-h-[24px]"
+                                    className="bg-transparent flex-1 text-sm text-white focus:outline-none placeholder-zinc-500 min-h-[20px]"
                                     onKeyDown={(e) => e.key === 'Enter' && handlePostComment()}
                                 />
-                                <div className="flex gap-3 text-zinc-500 items-center">
-                                    <button className="hover:text-gsn-green transition-colors"><Image size={20} /></button>
+                                <div className="flex gap-2 text-zinc-500 items-center">
+                                    <button className="hover:text-gsn-green transition-colors"><Image size={18} /></button>
                                     <button 
                                         onClick={handlePostComment}
                                         disabled={!newComment.trim()}
                                         className={`ml-1 transition-colors ${newComment.trim() ? 'text-gsn-green' : 'opacity-40 cursor-not-allowed'}`}
                                     >
-                                        <Send size={20} fill={newComment.trim() ? "currentColor" : "none"} />
+                                        <Send size={18} fill={newComment.trim() ? "currentColor" : "none"} />
                                     </button>
                                 </div>
                             </div>
@@ -300,7 +300,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, onBack, onNavigateToProfi
                     ))}
                     
                     {comments.length === 0 && (
-                        <div className="p-8 text-center text-zinc-500">
+                        <div className="p-8 text-center text-zinc-500 text-sm">
                             No comments yet. Be the first to start the conversation.
                         </div>
                     )}
@@ -315,7 +315,7 @@ const ActionButton = ({ icon, count, color, bg, onClick }: { icon: React.ReactNo
         <div className={`p-2 rounded-full transition-colors ${bg}`}>
             {icon}
         </div>
-        {count !== undefined && <span className="text-sm font-medium">{count}</span>}
+        {count !== undefined && <span className="text-xs font-medium">{count}</span>}
     </div>
 );
 
@@ -338,7 +338,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
     }
 
     return (
-        <div className={`relative ${depth > 0 ? 'ml-8 md:ml-12 mt-2 pl-4 border-l border-white/10' : ''}`}>
+        <div className={`relative ${depth > 0 ? 'ml-8 md:ml-12 mt-2 pl-3 border-l border-white/10' : ''}`}>
             {showReportModal && (
                 <ReportModal 
                     type="Comment" 
@@ -347,25 +347,25 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
                 />
             )}
             
-            <div className="px-4 py-3 flex gap-3 animate-in fade-in duration-300">
+            <div className="px-4 py-2 flex gap-3 animate-in fade-in duration-300">
                  {/* Avatar */}
-                 <img src={comment.user.avatar} className="w-9 h-9 rounded-full cursor-pointer mt-1 flex-shrink-0 object-cover border border-white/10" onClick={() => onNavigateToProfile(comment.user.id)} />
+                 <img src={comment.user.avatar} className="w-8 h-8 rounded-full cursor-pointer mt-1 flex-shrink-0 object-cover border border-white/10" onClick={() => onNavigateToProfile(comment.user.id)} />
                  
-                 <div className="flex-1 max-w-[calc(100%-48px)]">
+                 <div className="flex-1 max-w-[calc(100%-40px)]">
                      <div className="group relative inline-block max-w-full">
                          {/* Comment Bubble */}
-                         <div className="rounded-2xl px-4 py-3 bg-zinc-900 border border-white/5 relative group/bubble">
-                             <div className="flex justify-between items-start gap-4 mb-1">
-                                 <div onClick={() => onNavigateToProfile(comment.user.id)} className="font-bold text-sm text-white cursor-pointer hover:underline flex items-center gap-1">
+                         <div className="rounded-xl px-3 py-2 bg-zinc-900 border border-white/5 relative group/bubble">
+                             <div className="flex justify-between items-start gap-4 mb-0.5">
+                                 <div onClick={() => onNavigateToProfile(comment.user.id)} className="font-bold text-xs text-white cursor-pointer hover:underline flex items-center gap-1">
                                      {comment.user.name}
-                                     {comment.user.verified && <span className="text-gsn-green text-[10px]"><Zap size={10} fill="currentColor"/></span>}
-                                     <span className="text-zinc-500 font-normal ml-1 text-xs">· {formatTimeShort(comment.timestamp)}</span>
+                                     {comment.user.verified && <span className="text-gsn-green text-[8px]"><Zap size={8} fill="currentColor"/></span>}
+                                     <span className="text-zinc-500 font-normal ml-1 text-[10px]">· {formatTimeShort(comment.timestamp)}</span>
                                  </div>
                                  <button onClick={() => setShowMore(true)} className="opacity-0 group-hover/bubble:opacity-100 transition-opacity text-zinc-500 hover:text-white">
-                                     <MoreHorizontal size={14} />
+                                     <MoreHorizontal size={12} />
                                  </button>
                              </div>
-                             <p className="text-sm text-zinc-200 leading-relaxed break-words whitespace-pre-wrap">{comment.text}</p>
+                             <p className="text-xs md:text-sm text-zinc-200 leading-relaxed break-words whitespace-pre-wrap">{comment.text}</p>
                          </div>
                          
                          {/* Reaction Count Bubble */}
@@ -374,20 +374,20 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onNavigateToProfile,
                                  <div className="bg-pink-500 rounded-full p-[2px]">
                                      <Heart size={6} className="text-white" fill="currentColor" />
                                  </div>
-                                 <span className="text-[10px] text-zinc-200 font-bold">{likes}</span>
+                                 <span className="text-[9px] text-zinc-200 font-bold">{likes}</span>
                              </div>
                          )}
                      </div>
 
                      {/* Action Bar */}
-                     <div className="flex items-center gap-4 mt-1.5 ml-2 relative">
+                     <div className="flex items-center gap-3 mt-1 ml-2 relative">
                          <button 
                             onClick={toggleLike}
-                            className={`flex items-center gap-1 text-xs font-bold transition-colors ${isLiked ? 'text-pink-500' : 'text-zinc-400 hover:text-pink-500'}`}
+                            className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${isLiked ? 'text-pink-500' : 'text-zinc-400 hover:text-pink-500'}`}
                          >
                             Like
                          </button>
-                         <button className="flex items-center gap-1 text-xs font-bold text-zinc-400 hover:text-blue-400 transition-colors">
+                         <button className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 hover:text-blue-400 transition-colors">
                             Reply
                          </button>
                      </div>

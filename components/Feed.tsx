@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Share2, MoreHorizontal, Repeat, RefreshCw, Bookmark, Plus, Play, X, Zap, Flame, PenTool } from 'lucide-react';
 import { CURRENT_USER } from '../constants';
 import { Post, Vibe } from '../types';
@@ -54,6 +54,11 @@ const Feed: React.FC<FeedProps> = ({
     const [vibes, setVibes] = useState<Vibe[]>([]);
     const [viewingVibes, setViewingVibes] = useState<{vibes: Vibe[], initialIndex: number} | null>(null);
     
+    // Pull-to-refresh state
+    const [pullY, setPullY] = useState(0);
+    const startY = useRef(0);
+    const isDragging = useRef(false);
+    
     const vibeUsers = getVibeGroups(vibes);
 
     // Subscribe to Realtime DB
@@ -73,8 +78,50 @@ const Feed: React.FC<FeedProps> = ({
     const handleRefresh = () => {
         setIsRefreshing(true);
         // DB Listener updates automatically, so this is just visual
-        setTimeout(() => setIsRefreshing(false), 1500);
+        setTimeout(() => {
+            setIsRefreshing(false);
+            setPullY(0);
+        }, 1500);
     }
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (window.scrollY === 0) {
+            startY.current = e.touches[0].clientY;
+            isDragging.current = true;
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging.current) return;
+        
+        // If user scrolls down while dragging, stop pulling effect
+        if (window.scrollY > 0) {
+            isDragging.current = false;
+            setPullY(0);
+            return;
+        }
+
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY.current;
+
+        if (diff > 0) {
+            // Apply resistance to the pull
+            setPullY(diff * 0.4);
+        } else {
+            setPullY(0);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (!isDragging.current) return;
+        isDragging.current = false;
+
+        if (pullY > 80) { // Threshold to trigger refresh
+            handleRefresh();
+        } else {
+            setPullY(0);
+        }
+    };
 
     const handleOpenVibe = (vibes: Vibe[]) => {
         const firstUnseen = vibes.findIndex(v => !v.isSeen);
@@ -85,7 +132,12 @@ const Feed: React.FC<FeedProps> = ({
     }
 
     return (
-        <div className="min-h-screen bg-black pb-20 md:pb-0">
+        <div 
+            className="min-h-screen bg-black pb-20 md:pb-0 relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             {viewingVibes && (
                 <VibeViewer 
                     vibes={viewingVibes.vibes}
@@ -95,30 +147,41 @@ const Feed: React.FC<FeedProps> = ({
             )}
 
             {/* Refresh Indicator */}
-            <div className={`fixed top-20 left-0 right-0 flex justify-center transition-opacity duration-300 z-40 pointer-events-none ${isRefreshing ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="bg-zinc-900 rounded-full p-2 shadow-xl border border-white/10">
-                    <RefreshCw className="animate-spin text-gsn-green" size={20} />
+            <div 
+                className="absolute top-0 left-0 right-0 flex justify-center z-40 pointer-events-none"
+                style={{ 
+                    transform: isRefreshing ? 'translateY(20px)' : `translateY(${Math.min(pullY - 40, 40)}px)`,
+                    opacity: isRefreshing ? 1 : Math.max(0, (pullY - 20) / 60),
+                    transition: isDragging.current ? 'none' : 'all 0.3s cubic-bezier(0,0,0.2,1)'
+                }}
+            >
+                <div className="bg-zinc-900 rounded-full p-2 shadow-xl border border-white/10 mt-4">
+                    <RefreshCw 
+                        className={`text-gsn-green ${isRefreshing ? 'animate-spin' : ''}`} 
+                        size={20} 
+                        style={{ transform: `rotate(${pullY * 2}deg)` }}
+                    />
                 </div>
             </div>
 
             {/* Feed Content */}
             <div style={{ 
-                transform: `translateY(${isRefreshing ? 60 : 0}px)`,
-                transition: 'transform 0.3s cubic-bezier(0,0,0.2,1)'
+                transform: isRefreshing ? 'translateY(60px)' : `translateY(${pullY * 0.4}px)`,
+                transition: isDragging.current ? 'none' : 'transform 0.3s cubic-bezier(0,0,0.2,1)'
             }}>
                 {/* VIBES Rail */}
-                <div className="pt-4 pb-4 md:pt-6 bg-black border-b border-white/5">
-                    <div className="flex gap-3 overflow-x-auto no-scrollbar px-4">
+                <div className="pt-3 pb-3 md:pt-4 bg-black border-b border-white/5">
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar px-3">
                         <div 
                             onClick={onNavigateToCreateStory}
-                            className="min-w-[100px] w-[100px] h-[160px] rounded-[1.5rem] overflow-hidden relative cursor-pointer group bg-zinc-900/50 shrink-0 border border-white/5 hover:border-gsn-green/30 transition-all"
+                            className="min-w-[85px] w-[85px] h-[135px] rounded-[1.2rem] overflow-hidden relative cursor-pointer group bg-zinc-900/50 shrink-0 border border-white/5 hover:border-gsn-green/30 transition-all"
                         >
                             <img src={CURRENT_USER.avatar} alt="Me" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-50 grayscale group-hover:grayscale-0" />
                             <div className="absolute inset-0 flex flex-col items-center justify-end pb-3">
-                                <div className="w-9 h-9 bg-gsn-green rounded-xl flex items-center justify-center mb-1 shadow-lg shadow-green-900/50">
-                                    <Plus size={20} className="text-black stroke-[3px]" />
+                                <div className="w-7 h-7 bg-gsn-green rounded-xl flex items-center justify-center mb-1 shadow-lg shadow-green-900/50">
+                                    <Plus size={16} className="text-black stroke-[3px]" />
                                 </div>
-                                <span className="text-white text-[10px] font-bold">New Vibe</span>
+                                <span className="text-white text-[10px] font-bold">New</span>
                             </div>
                         </div>
 
@@ -126,14 +189,14 @@ const Feed: React.FC<FeedProps> = ({
                             <div 
                                 key={group.user.id} 
                                 onClick={() => handleOpenVibe(group.vibes)}
-                                className="min-w-[100px] w-[100px] h-[160px] rounded-[1.5rem] overflow-hidden relative cursor-pointer group bg-zinc-900 shrink-0 border border-white/20 transition-all"
+                                className="min-w-[85px] w-[85px] h-[135px] rounded-[1.2rem] overflow-hidden relative cursor-pointer group bg-zinc-900 shrink-0 border border-white/20 transition-all"
                             >
                                 <img src={group.latestVibe.media} alt={group.user.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                 <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90"></div>
-                                <div className={`absolute top-2 left-2 w-8 h-8 rounded-full p-[2px] ${group.allSeen ? 'bg-zinc-700' : 'bg-gradient-to-tr from-gsn-green to-blue-500'} shadow-lg`}>
+                                <div className={`absolute top-2 left-2 w-7 h-7 rounded-full p-[2px] ${group.allSeen ? 'bg-zinc-700' : 'bg-gradient-to-tr from-gsn-green to-blue-500'} shadow-lg`}>
                                     <img src={group.user.avatar} className="w-full h-full rounded-full border border-black" alt="User" />
                                 </div>
-                                <span className="absolute bottom-2 left-2 text-white text-[10px] font-bold drop-shadow-md truncate w-[90%]">{group.user.name}</span>
+                                <span className="absolute bottom-2 left-2 text-white text-[9px] font-bold drop-shadow-md truncate w-[90%]">{group.user.name}</span>
                             </div>
                         ))}
                     </div>
@@ -256,11 +319,11 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
         <>
             <div 
                 onClick={onClick}
-                className={`group relative p-5 cursor-pointer transition-colors ${bgClass}`}
+                className={`group relative p-4 cursor-pointer transition-colors ${bgClass}`}
             >
-                <div className="flex gap-4">
+                <div className="flex gap-3">
                     <div onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.user.id)}} className="shrink-0 cursor-pointer">
-                        <img src={post.user.avatar} className="w-12 h-12 rounded-full border border-zinc-700 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
+                        <img src={post.user.avatar} className="w-10 h-10 rounded-full border border-zinc-700 object-cover hover:opacity-80 transition-opacity" alt={post.user.name} />
                     </div>
                     
                     <div className="flex-1 min-w-0">
@@ -269,25 +332,25 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <span 
                                         onClick={(e) => { e.stopPropagation(); onNavigateToProfile(post.user.id); }}
-                                        className="font-bold text-white text-[15px] hover:underline cursor-pointer"
+                                        className="font-bold text-white text-sm hover:underline cursor-pointer"
                                     >
                                         {post.user.name}
                                     </span>
-                                    {post.user.verified && <span className="text-gsn-green"><Zap size={12} fill="currentColor" /></span>}
+                                    {post.user.verified && <span className="text-gsn-green"><Zap size={10} fill="currentColor" /></span>}
                                     
                                     {post.community && (
                                         <>
-                                            <span className="text-zinc-500 text-xs">in</span>
+                                            <span className="text-zinc-500 text-[10px]">in</span>
                                             <span 
                                                 onClick={(e) => { e.stopPropagation(); onNavigateToCommunity?.(post.community!.id); }}
-                                                className="font-bold text-zinc-300 text-[13px] hover:text-gsn-green hover:underline cursor-pointer"
+                                                className="font-bold text-zinc-300 text-xs hover:text-gsn-green hover:underline cursor-pointer"
                                             >
                                                 {post.community.name}
                                             </span>
                                         </>
                                     )}
 
-                                    <span className="text-zinc-600 text-xs">· {formatTimeShort(post.timestamp)}</span>
+                                    <span className="text-zinc-600 text-[10px] md:text-xs">· {formatTimeShort(post.timestamp)}</span>
                                 </div>
                                 <span 
                                     onClick={(e) => { e.stopPropagation(); onNavigateToProfile(post.user.id); }}
@@ -297,18 +360,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                                 </span>
                             </div>
                             <button onClick={handleOptionsClick} className="text-zinc-600 hover:text-white p-1 -mr-2 rounded-full hover:bg-zinc-800 transition-colors">
-                                <MoreHorizontal size={20} />
+                                <MoreHorizontal size={18} />
                             </button>
                         </div>
 
-                        <div className="mt-3 text-[15px] text-zinc-100 whitespace-pre-wrap leading-relaxed">
+                        <div className="mt-1.5 text-sm text-zinc-100 whitespace-pre-wrap leading-relaxed">
                             {renderContent(post.content)}
                         </div>
 
                         {post.images && post.images.length > 0 && (
-                            <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
+                            <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-1">
                                 {post.images.map((img, i) => (
-                                    <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-xl border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-auto max-h-[500px]'}`}>
+                                    <div key={i} className={`shrink-0 snap-center overflow-hidden rounded-lg border border-white/5 bg-zinc-900 ${post.images!.length > 1 ? 'w-[85%] aspect-[4/5]' : 'w-full h-auto max-h-[400px]'}`}>
                                         <img src={img} className="h-full w-full object-cover" alt="Post media" />
                                     </div>
                                 ))}
@@ -318,29 +381,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
                         {post.quotedPost && (
                             <div 
                                 onClick={(e) => { e.stopPropagation(); onNavigateToPost?.(post.quotedPost!.id); }}
-                                className="mt-4 border border-white/10 rounded-xl p-4 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                                className="mt-3 border border-white/10 rounded-lg p-3 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
                             >
-                                <div className="flex items-center gap-2 mb-2">
-                                    <img src={post.quotedPost.user.avatar} className="w-5 h-5 rounded-full" />
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <img src={post.quotedPost.user.avatar} className="w-4 h-4 rounded-full" />
                                     <span className="text-xs font-bold text-white hover:underline" onClick={(e) => {e.stopPropagation(); onNavigateToProfile(post.quotedPost!.user.id)}}>{post.quotedPost.user.name}</span>
-                                    <span className="text-xs text-zinc-500">@{post.quotedPost.user.handle.replace('@','')}</span>
+                                    <span className="text-[10px] text-zinc-500">@{post.quotedPost.user.handle.replace('@','')}</span>
                                 </div>
-                                <p className="text-sm text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
+                                <p className="text-xs text-zinc-300 line-clamp-3">{post.quotedPost.content}</p>
                             </div>
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex justify-between items-center mt-4 pt-2">
+                        <div className="flex justify-between items-center mt-3 pt-1">
                             {/* Left Group: Comment, Repost, Share */}
-                            <div className="flex items-center gap-6">
-                                <ActionButton icon={<MessageCircle size={20} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
-                                <ActionButton icon={<Repeat size={20} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
-                                <ActionButton icon={<Share2 size={20} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
+                            <div className="flex items-center gap-5">
+                                <ActionButton icon={<MessageCircle size={18} />} count={post.comments} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={onClick} />
+                                <ActionButton icon={<Repeat size={18} />} count={repostCount} color="hover:text-green-500" bg="group-hover:bg-green-500/10" onClick={handleRepostClick} />
+                                <ActionButton icon={<Share2 size={18} />} count={post.shares} color="hover:text-blue-400" bg="group-hover:bg-blue-500/10" onClick={handleShareClick} />
                             </div>
 
                             {/* Right Group: Fire (Like) */}
                             <div className="flex items-center">
-                                <ActionButton icon={<Flame size={20} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
+                                <ActionButton icon={<Flame size={18} fill={liked ? "currentColor" : "none"} />} count={likeCount} color={liked ? "text-orange-500" : "hover:text-orange-500"} bg={liked ? "" : "group-hover:bg-orange-500/10"} onClick={handleLike} />
                             </div>
                         </div>
                     </div>
@@ -387,8 +450,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, index = 0, onNavigateT
 };
 
 const ActionButton = ({ icon, count, color, bg, onClick }: any) => (
-    <div className={`flex items-center gap-1.5 group/btn transition-colors text-zinc-500 cursor-pointer ${color}`} onClick={onClick}>
-        <div className={`p-2 rounded-full transition-colors ${bg} -ml-2`}>{icon}</div>
+    <div className={`flex items-center gap-1 group/btn transition-colors text-zinc-500 cursor-pointer ${color}`} onClick={onClick}>
+        <div className={`p-1.5 rounded-full transition-colors ${bg} -ml-2`}>{icon}</div>
         {count !== undefined && <span className="text-xs font-medium">{count}</span>}
     </div>
 );
