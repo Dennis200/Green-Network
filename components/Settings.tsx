@@ -17,15 +17,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout }) => {
     const [pushNotifs, setPushNotifs] = useState(true);
     const [emailNotifs, setEmailNotifs] = useState(true);
 
-    const handleResetTutorials = () => {
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('guide_')) {
-                localStorage.removeItem(key);
-            }
-        });
-        alert("Tutorials have been reset. They will appear again when you visit sections.");
-    };
-
     const renderContent = () => {
         switch(view) {
             case 'account':
@@ -58,7 +49,6 @@ const Settings: React.FC<SettingsProps> = ({ onBack, onLogout }) => {
                         <SettingItem icon={<HelpCircle size={20} />} label="FAQ" onClick={() => alert("Opening FAQ...")} />
                         <SettingItem icon={<Mail size={20} />} label="Contact Support" onClick={() => alert("Opening support chat...")} />
                         <SettingItem icon={<Shield size={20} />} label="Community Guidelines" onClick={() => alert("Opening guidelines...")} />
-                        <SettingItem icon={<RefreshCw size={20} />} label="Reset Tutorials" onClick={handleResetTutorials} />
                     </SubPage>
                 );
             default:

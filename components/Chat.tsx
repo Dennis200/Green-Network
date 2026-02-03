@@ -269,15 +269,6 @@ const Chat: React.FC = () => {
 
   return (
     <div className="flex h-[calc(100vh-64px)] md:h-screen pt-0 md:pt-0 relative bg-[#0a0a0a] overflow-hidden">
-        <PageGuide 
-            pageKey="chat"
-            steps={[
-                { title: "Secure Comms", description: "Private messaging with end-to-end encryption for your peace of mind.", icon: <Lock size={20} /> },
-                { title: "Rich Media", description: "Share photos, voice notes, and video messages with your connections.", icon: <ImageIcon size={20} /> },
-                { title: "Calls", description: "Voice and Video calls are built right in. Click the icons at the top right.", icon: <Video size={20} /> }
-            ]}
-        />
-
         {showReportModal && selectedChat && (
             <ReportModal 
                 type={selectedChat.type === 'dm' ? 'User' : 'Community'} 

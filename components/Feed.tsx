@@ -8,7 +8,6 @@ import { ShareSheet, MoreMenu, RepostMenu } from './Menus';
 import { subscribeToPosts, toggleLikePost, subscribeToVibes, repostPost, incrementShare, checkIsLiked } from '../services/dataService';
 import { auth } from '../services/firebase';
 import { formatTimeShort } from '../utils';
-import PageGuide from './PageGuide';
 
 // Helper for Vibe grouping
 const getVibeGroups = (vibes: Vibe[]) => {
@@ -135,15 +134,6 @@ const Feed: React.FC<FeedProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            <PageGuide 
-                pageKey="feed"
-                steps={[
-                    { title: "Uncensored Feed", description: "Share your cultivation journey, glass collection, or sessions without fear of bans. This is your safe space.", icon: <ShieldCheck size={20} /> },
-                    { title: "Vibes", description: "Tap the circles at the top to see ephemeral stories from growers and friends. They disappear after 24 hours.", icon: <Zap size={20} /> },
-                    { title: "Interact", description: "Like, comment, repost, and share. Support the culture and build your reputation in the network.", icon: <Rss size={20} /> }
-                ]}
-            />
-
             {viewingVibes && (
                 <VibeViewer 
                     vibes={viewingVibes.vibes}
@@ -400,7 +390,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, currentUser, index = 0
                         {post.quotedPost && (
                             <div 
                                 onClick={(e) => { e.stopPropagation(); onNavigateToPost?.(post.quotedPost!.id); }}
-                                className="mt-3 border border-white/10 rounded-lg p-3 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                                className="mt-3 border border-white/10 rounded-lg p-3 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group/quote"
                             >
                                 <div className="flex items-center gap-2 mb-1.5">
                                     <img src={post.quotedPost.user.avatar} className="w-4 h-4 rounded-full" />

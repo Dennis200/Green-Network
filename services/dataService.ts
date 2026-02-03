@@ -76,7 +76,8 @@ export const toggleLikePost = async (postId: string, userId: string, postAuthorI
             createNotification({
                 type: 'like',
                 text: 'liked your post',
-                postImage: postSnap.val().images?.[0] || undefined
+                postImage: postSnap.val().images?.[0] || undefined,
+                targetId: postId
             }, postAuthorId, userId);
         }
     }
@@ -117,7 +118,8 @@ export const repostPost = async (originalPost: Post, user: User, quoteText?: str
         createNotification({
             type: 'repost',
             text: 'reposted your post',
-            postImage: originalPost.images?.[0]
+            postImage: originalPost.images?.[0],
+            targetId: originalPost.id
         }, originalPost.user.id, user.id);
     }
 };
@@ -147,6 +149,7 @@ export const addComment = async (postId: string, text: string, user: User, postA
         createNotification({
             type: 'comment',
             text: `commented: "${text.substring(0, 20)}..."`,
+            targetId: postId
         }, postAuthorId, user.id);
     }
 
@@ -180,6 +183,7 @@ export const followUser = async (currentUserId: string, targetUserId: string) =>
     createNotification({
         type: 'follow',
         text: 'started following you',
+        targetId: currentUserId // Navigate to profile who followed
     }, targetUserId, currentUserId);
 };
 
@@ -391,6 +395,7 @@ export const createNotification = async (notifData: Partial<Notification>, recip
         timestamp: 'Just now',
         read: false,
         type: 'system', // default
+        targetId: '', // Default empty if not provided
         ...notifData,
         user: user || notifData.user
     };
@@ -414,6 +419,23 @@ export const subscribeToNotifications = (userId: string, onUpdate: (notifs: Noti
 export const markNotificationRead = async (userId: string, notificationId: string) => {
     const notifRef = ref(db, `notifications/${userId}/${notificationId}`);
     await update(notifRef, { read: true });
+};
+
+export const markAllNotificationsRead = async (userId: string) => {
+    const notifRef = ref(db, `notifications/${userId}`);
+    const snapshot = await get(notifRef);
+    
+    if (snapshot.exists()) {
+        const updates: any = {};
+        snapshot.forEach((childSnapshot) => {
+            if (!childSnapshot.val().read) {
+                updates[`${childSnapshot.key}/read`] = true;
+            }
+        });
+        if (Object.keys(updates).length > 0) {
+            await update(notifRef, updates);
+        }
+    }
 };
 
 // --- VIBES ---

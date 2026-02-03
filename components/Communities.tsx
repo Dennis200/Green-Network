@@ -61,15 +61,6 @@ const Communities: React.FC<CommunitiesProps> = ({ onNavigateToProfile, onBack, 
 
     return (
         <div className="min-h-screen bg-black pb-20 md:pb-0 relative overflow-hidden">
-            <PageGuide 
-                pageKey="communities"
-                steps={[
-                    { title: "Your Tribe", description: "Find groups for hydroponics, local seshes, or genetic hunting.", icon: <Users size={20} /> },
-                    { title: "Channels", description: "Each community has focused channels for chat, events, and showcase.", icon: <Hash size={20} /> },
-                    { title: "Privacy", description: "Some groups are invite-only. Look for the lock icon.", icon: <Lock size={20} /> }
-                ]}
-            />
-
             {showCreateModal && (
                 <CreateCommunityModal 
                     onClose={() => setShowCreateModal(false)} 

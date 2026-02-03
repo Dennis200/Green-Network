@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Bookmark, Share2, Ban, Flag, Copy, Send, Camera, Instagram, Twitter, MessageSquare, Repeat, PenTool, Trash2 } from 'lucide-react';
+import { ActionSheet } from './ActionSheet';
 
 // --- Reusable Menu Components ---
 
@@ -43,7 +44,7 @@ export const MenuButton = ({
 }) => (
     <button 
         onClick={(e) => { e.stopPropagation(); onClick(); }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors group ${danger ? 'hover:bg-red-500/10' : 'hover:bg-white/5'}`}
+        className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors group ${danger ? 'hover:bg-red-500/10' : 'hover:bg-white/5'}`}
     >
         <div className={`${danger ? 'text-red-500' : color} ${!danger ? hoverColor : ''} transition-colors`}>{icon}</div>
         <div className="flex-1">
@@ -55,43 +56,73 @@ export const MenuButton = ({
 
 // --- Specific Menus ---
 
-export const MoreMenu = ({ onClose, type, onReport, onBookmark, isBookmarked }: { onClose: () => void, type: string, onReport: () => void, onBookmark?: () => void, isBookmarked?: boolean }) => (
-    <DropdownMenu onClose={onClose}>
-        {onBookmark && (
+export const MoreMenu = ({ onClose, type, onReport, onBookmark, isBookmarked }: { onClose: () => void, type: string, onReport: () => void, onBookmark?: () => void, isBookmarked?: boolean }) => {
+    
+    const MenuItems = () => (
+        <>
+            {onBookmark && (
+                <MenuButton 
+                    icon={<Bookmark size={20} fill={isBookmarked ? "currentColor" : "none"} />} 
+                    label={isBookmarked ? "Remove from Saved" : "Save"} 
+                    onClick={() => { onBookmark(); onClose(); }}
+                />
+            )}
+            
             <MenuButton 
-                icon={<Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />} 
-                label={isBookmarked ? "Remove from Saved" : "Save Post"} 
-                onClick={() => { onBookmark(); onClose(); }}
+                icon={<Share2 size={20} />} 
+                label="Share" 
+                onClick={() => {
+                    alert("Share triggered"); 
+                    onClose();
+                }} 
             />
-        )}
-        
-        <MenuButton 
-            icon={<Share2 size={18} />} 
-            label="Share via..." 
-            onClick={() => {
-                alert("Share triggered"); 
-                onClose();
-            }} 
-        />
-        
-        {(type === 'User' || type === 'Chat') && (
+            
+            {(type === 'User' || type === 'Chat') && (
+                <MenuButton 
+                    icon={<Ban size={20} />} 
+                    label={`Block @${type === 'User' ? 'user' : 'chat'}`} 
+                    onClick={() => { alert("Block triggered"); onClose(); }} 
+                />
+            )}
+
+            {/* Desktop Divider */}
+            <div className="h-px bg-white/5 my-1 md:block hidden" />
+
             <MenuButton 
-                icon={<Ban size={18} />} 
-                label={`Block @${type === 'User' ? 'user' : 'chat'}`} 
-                onClick={() => { alert("Block triggered"); onClose(); }} 
+                icon={<Flag size={20} />} 
+                label={`Report ${type}`} 
+                onClick={onReport} 
+                danger
             />
-        )}
+        </>
+    );
 
-        <div className="h-px bg-white/5 my-1" />
+    return (
+        <>
+            {/* Desktop Dropdown */}
+            <div className="hidden md:block">
+                <DropdownMenu onClose={onClose}>
+                    <MenuItems />
+                </DropdownMenu>
+            </div>
 
-        <MenuButton 
-            icon={<Flag size={18} />} 
-            label={`Report ${type}`} 
-            onClick={onReport} 
-            danger
-        />
-    </DropdownMenu>
-);
+            {/* Mobile Action Sheet */}
+            <div className="md:hidden">
+                <ActionSheet onClose={onClose}>
+                    <div className="bg-zinc-800/50 rounded-2xl overflow-hidden divide-y divide-white/5">
+                        <MenuItems />
+                    </div>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="w-full bg-zinc-900 border border-white/10 text-white font-bold py-4 rounded-2xl mt-2 active:scale-95 transition-transform"
+                    >
+                        Cancel
+                    </button>
+                </ActionSheet>
+            </div>
+        </>
+    );
+};
 
 export const ShareSheet = ({ onClose, postLink }: { onClose: () => void, postLink?: string }) => {
     const handleShare = async (platform: string) => {
@@ -111,30 +142,68 @@ export const ShareSheet = ({ onClose, postLink }: { onClose: () => void, postLin
         onClose();
     };
 
+    const ShareItems = () => (
+        <>
+            <div className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider md:block hidden">Share to</div>
+            <MenuButton icon={<Copy size={20} />} label="Copy Link" onClick={() => handleShare('Copy')} />
+            <MenuButton icon={<Send size={20} />} label="Send as Message" onClick={() => handleShare('DM')} />
+            <MenuButton icon={<Instagram size={20} />} label="Instagram Stories" onClick={() => handleShare('Instagram')} />
+            <MenuButton icon={<Twitter size={20} />} label="Post to X" onClick={() => handleShare('X')} />
+        </>
+    );
+
     return (
-        <DropdownMenu onClose={onClose} className="bottom-12 left-4 w-72 origin-bottom-left top-auto">
-            <div className="px-4 py-2 text-xs font-bold text-zinc-500 uppercase tracking-wider">Share to</div>
-            <MenuButton icon={<Copy size={18} />} label="Copy Link" onClick={() => handleShare('Copy')} />
-            <MenuButton icon={<Send size={18} />} label="Send as Message" onClick={() => handleShare('DM')} />
-            <MenuButton icon={<Instagram size={18} />} label="Instagram Stories" onClick={() => handleShare('Instagram')} />
-            <MenuButton icon={<Twitter size={18} />} label="Post to X" onClick={() => handleShare('X')} />
-        </DropdownMenu>
+        <>
+            <div className="hidden md:block">
+                <DropdownMenu onClose={onClose} className="bottom-12 left-4 w-72 origin-bottom-left top-auto">
+                    <ShareItems />
+                </DropdownMenu>
+            </div>
+            <div className="md:hidden">
+                <ActionSheet onClose={onClose} title="Share to">
+                    <div className="bg-zinc-800/50 rounded-2xl overflow-hidden divide-y divide-white/5">
+                        <ShareItems />
+                    </div>
+                    <button onClick={onClose} className="w-full bg-zinc-900 border border-white/10 text-white font-bold py-4 rounded-2xl mt-2">Cancel</button>
+                </ActionSheet>
+            </div>
+        </>
     );
 };
 
-export const RepostMenu = ({ onClose, onRepost, onQuote }: { onClose: () => void, onRepost: () => void, onQuote: () => void }) => (
-    <DropdownMenu onClose={onClose} className="bottom-12 left-0 origin-bottom-left top-auto">
-        <MenuButton 
-            icon={<Repeat size={18} className="text-green-500" />} 
-            label="Repost" 
-            subLabel="Instantly share to your feed"
-            onClick={onRepost}
-        />
-        <MenuButton 
-            icon={<PenTool size={18} className="text-blue-400" />} 
-            label="Quote Post" 
-            subLabel="Add your own thoughts"
-            onClick={onQuote}
-        />
-    </DropdownMenu>
-);
+export const RepostMenu = ({ onClose, onRepost, onQuote }: { onClose: () => void, onRepost: () => void, onQuote: () => void }) => {
+    const MenuItems = () => (
+        <>
+            <MenuButton 
+                icon={<Repeat size={20} className="text-green-500" />} 
+                label="Repost" 
+                subLabel="Instantly share to your feed"
+                onClick={onRepost}
+            />
+            <MenuButton 
+                icon={<PenTool size={20} className="text-blue-400" />} 
+                label="Quote Post" 
+                subLabel="Add your own thoughts"
+                onClick={onQuote}
+            />
+        </>
+    );
+
+    return (
+        <>
+            <div className="hidden md:block">
+                <DropdownMenu onClose={onClose} className="bottom-12 left-0 origin-bottom-left top-auto">
+                    <MenuItems />
+                </DropdownMenu>
+            </div>
+            <div className="md:hidden">
+                <ActionSheet onClose={onClose}>
+                    <div className="bg-zinc-800/50 rounded-2xl overflow-hidden divide-y divide-white/5">
+                        <MenuItems />
+                    </div>
+                    <button onClick={onClose} className="w-full bg-zinc-900 border border-white/10 text-white font-bold py-4 rounded-2xl mt-2">Cancel</button>
+                </ActionSheet>
+            </div>
+        </>
+    );
+};

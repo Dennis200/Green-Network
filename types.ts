@@ -94,6 +94,7 @@ export interface Notification {
   postImage?: string; 
   timestamp: string;
   read: boolean;
+  targetId?: string; // ID of the post, user, or entity to navigate to
 }
 
 export interface Post {

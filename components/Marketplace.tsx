@@ -10,7 +10,6 @@ import { createProduct, subscribeToProducts } from '../services/dataService';
 import { uploadToCloudinary } from '../services/cloudinary';
 import { auth } from '../services/firebase';
 import { subscribeToUserProfile } from '../services/userService';
-import PageGuide from './PageGuide';
 
 interface MarketplaceProps {
     onNavigateToChat: () => void;
@@ -57,15 +56,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigateToChat, startCreati
 
     return (
         <div className="min-h-screen bg-black pb-24 md:pb-0 overflow-x-hidden">
-            <PageGuide 
-                pageKey="marketplace"
-                steps={[
-                    { title: "The Stash", description: "Buy, sell, and trade genetics, glass, and equipment peer-to-peer. A true open market.", icon: <ShoppingBag size={20} /> },
-                    { title: "Filters", description: "Use categories to find exactly what you need for your setup, from lights to nutrients.", icon: <Filter size={20} /> },
-                    { title: "Safe Trading", description: "Always meet in public places for local pickups and check seller ratings.", icon: <ShieldCheck size={20} /> }
-                ]}
-            />
-
             {/* Modal */}
             {selectedProduct && (
                 <ProductModal 
@@ -208,9 +198,6 @@ const Marketplace: React.FC<MarketplaceProps> = ({ onNavigateToChat, startCreati
 };
 
 const CreateListingView = ({ onClose }: { onClose: () => void }) => {
-    // ... existing implementation
-    // Placeholder to keep the file from being too large in this specific response block, reusing existing logic
-    // (In a real scenario, the full component code would be here, assuming it's unchanged from previous context)
     const [images, setImages] = useState<string[]>([]);
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [title, setTitle] = useState('');

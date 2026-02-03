@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag, Eye, Edit } from 'lucide-react';
-import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT_USER } from '../constants';
+import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag, Eye, Edit, X, CheckCircle } from 'lucide-react';
+import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT_USER, MOCK_USERS } from '../constants';
 import { User, Vibe } from '../types';
 import MediaViewer from './MediaViewer';
 import VibeViewer from './VibeViewer';
@@ -10,7 +10,6 @@ import ReportModal from './ReportModal';
 import UserShop from './UserShop';
 import { checkIsFollowing, followUser, unfollowUser, subscribeToFollowStats } from '../services/dataService';
 import { auth } from '../services/firebase';
-import PageGuide from './PageGuide';
 
 interface ProfileProps {
     userId: string;
@@ -37,6 +36,7 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [viewingVibes, setViewingVibes] = useState<{vibes: Vibe[], initialIndex: number} | null>(null);
+  const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
   
   const userPosts = MOCK_POSTS.filter(p => p.user.id === userId); // Should use real posts eventually
   const userReels = MOCK_REELS.filter(r => r.user.id === userId);
@@ -91,14 +91,16 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
 
   return (
     <div className="min-h-screen bg-black pb-32 relative overflow-x-hidden">
-        {isCurrentUser && (
-            <PageGuide 
-                pageKey="profile"
-                steps={[
-                    { title: "Your Profile", description: "This is how the community sees you. Customize your bio, cover image, and avatar.", icon: <Eye size={20} /> },
-                    { title: "Edit", description: "Use the edit button to update your details, social links, and Stoner Badge.", icon: <Edit size={20} /> },
-                    { title: "Content", description: "Your posts, reels, and shop listings are organized here.", icon: <Grid size={20} /> }
-                ]}
+        {showFollowList && (
+            <UserListModal 
+                title={showFollowList === 'followers' ? 'Followers' : 'Following'}
+                onClose={() => setShowFollowList(null)}
+                // Mocking list for now, ideally fetch based on relationships
+                users={MOCK_USERS.filter(u => u.id !== userId).slice(0, 10)} 
+                onNavigateToProfile={(id) => {
+                    setShowFollowList(null);
+                    onNavigateToProfile(id);
+                }}
             />
         )}
 
@@ -270,9 +272,9 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
 
                 {/* Stats Column */}
                 <div className="flex justify-between lg:justify-end items-start gap-12 pt-8 lg:pt-0 border-t lg:border-t-0 lg:border-l border-white/5">
-                    <StatItem label="Posts" value={userPosts.length.toString()} />
-                    <StatItem label="Followers" value={followerCount.toLocaleString()} />
-                    <StatItem label="Following" value={followingCount.toLocaleString()} />
+                    <StatItem label="Posts" value={userPosts.length.toString()} onClick={() => setActiveTab('posts')} />
+                    <StatItem label="Followers" value={followerCount.toLocaleString()} onClick={() => setShowFollowList('followers')} />
+                    <StatItem label="Following" value={followingCount.toLocaleString()} onClick={() => setShowFollowList('following')} />
                 </div>
             </div>
 
@@ -335,9 +337,9 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
   );
 };
 
-const StatItem = ({ label, value }: { label: string, value: string }) => (
-    <div className="text-center lg:text-right">
-        <div className="text-3xl md:text-4xl font-black text-white mb-2">{value}</div>
+const StatItem = ({ label, value, onClick }: { label: string, value: string, onClick?: () => void }) => (
+    <div className={`text-center lg:text-right ${onClick ? 'cursor-pointer group' : ''}`} onClick={onClick}>
+        <div className={`text-3xl md:text-4xl font-black text-white mb-2 ${onClick ? 'group-hover:text-gsn-green transition-colors' : ''}`}>{value}</div>
         <div className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{label}</div>
     </div>
 );
@@ -363,5 +365,41 @@ const EmptyState = ({ label, sub }: { label: string, sub?: string }) => (
         {sub && <p className="text-base">{sub}</p>}
     </div>
 );
+
+// --- FOLLOWERS / FOLLOWING MODAL ---
+const UserListModal = ({ title, users, onClose, onNavigateToProfile }: { title: string, users: User[], onClose: () => void, onNavigateToProfile: (id: string) => void }) => {
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-zinc-900 w-full max-w-md rounded-3xl border border-white/10 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-white/10 flex items-center justify-between">
+                    <h3 className="font-bold text-white text-lg">{title}</h3>
+                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-zinc-400 hover:text-white">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2">
+                    {users.map(user => (
+                        <div key={user.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => onNavigateToProfile(user.id)}>
+                            <img src={user.avatar} className="w-12 h-12 rounded-full border border-white/10 object-cover" />
+                            <div className="flex-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-bold text-white text-sm">{user.name}</span>
+                                    {user.verified && <CheckCircle size={12} className="text-gsn-green" />}
+                                </div>
+                                <span className="text-zinc-500 text-xs">{user.handle}</span>
+                            </div>
+                            <button className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:bg-zinc-200">
+                                View
+                            </button>
+                        </div>
+                    ))}
+                    {users.length === 0 && (
+                        <div className="p-8 text-center text-zinc-500">No users found.</div>
+                    )}
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export default Profile;

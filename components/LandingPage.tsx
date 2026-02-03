@@ -571,9 +571,6 @@ const ContactView = ({ onNavigate }: any) => (
 );
 
 // --- Components for HomeView ---
-// ... (FeatureCard, FAQItem, HomeView, LoginView, SignupView, LegalView remain largely the same, ensuring imports are correct) ...
-
-// Re-including these to complete the file structure as per instructions
 const FAQItem = ({ question, answer }: { question: string, answer: string }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
@@ -908,6 +905,23 @@ const SignupView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) =>
         }
     };
 
+    const handleGoogleSignup = async () => {
+        if (!ageVerified) {
+            setError("Please confirm you are 21+ to continue.");
+            return;
+        }
+        setLoading(true);
+        setError('');
+        try {
+            await signInWithPopup(auth, googleProvider);
+            // Profile creation is handled in App.tsx onAuthStateChanged
+        } catch (err: any) {
+            setError(err.message || 'Google signup failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen pt-24 pb-12 flex items-center justify-center px-4 bg-black">
             <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
@@ -944,8 +958,23 @@ const SignupView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) =>
                         </p>
                     </div>
                     {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs flex items-center gap-2"><AlertTriangle size={14} /> {error}</div>}
+                    
                     <button onClick={handleSignup} disabled={loading || !name || !email || !password || !ageVerified} className="w-full bg-gsn-green text-black font-black py-3 rounded-xl hover:bg-green-400 transition-all shadow-[0_0_20px_rgba(74,222,128,0.2)] disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                         {loading ? 'Creating Profile...' : 'Create Account'}
+                    </button>
+
+                    <div className="relative flex py-1 items-center">
+                        <div className="flex-grow border-t border-zinc-800"></div>
+                        <span className="flex-shrink-0 mx-4 text-zinc-600 text-[10px] uppercase font-bold">Or</span>
+                        <div className="flex-grow border-t border-zinc-800"></div>
+                    </div>
+
+                    <button 
+                        onClick={handleGoogleSignup}
+                        disabled={loading}
+                        className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors flex items-center justify-center gap-3 text-sm"
+                    >
+                        Continue with Google
                     </button>
                 </div>
                 <p className="text-center text-zinc-500 text-xs">

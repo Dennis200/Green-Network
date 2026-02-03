@@ -32,15 +32,6 @@ const Reels: React.FC<{ onNavigateToProfile: (id: string) => void, onNavigateToC
 
   return (
     <div className="h-screen w-full bg-black relative">
-        <PageGuide 
-            pageKey="reels"
-            steps={[
-                { title: "Swipe Up", description: "Discover endless short-form content from the best growers and creators.", icon: <Smartphone size={20} /> },
-                { title: "Get Creative", description: "Tap the camera icon to record your own clips, add music, and share your harvest.", icon: <Camera size={20} /> },
-                { title: "Engage", description: "Double tap to like, share with friends, and join the conversation in the comments.", icon: <Heart size={20} /> }
-            ]}
-        />
-
       {/* Header overlay for Reels view */}
       <div className="absolute top-4 left-4 right-4 z-40 flex justify-between items-center pointer-events-none">
          <div className="flex items-center gap-4 pointer-events-auto">

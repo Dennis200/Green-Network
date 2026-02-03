@@ -1,19 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, UserPlus, Repeat, Bell, Settings, ArrowLeft, Check, Trash2, Zap, Camera } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Repeat, Bell, Settings, ArrowLeft, Check, Trash2, Zap, Camera, CheckCheck } from 'lucide-react';
 import { Notification, User } from '../types';
-import { subscribeToNotifications } from '../services/dataService';
+import { subscribeToNotifications, markNotificationRead, markAllNotificationsRead } from '../services/dataService';
 import { auth } from '../services/firebase';
 
 interface NotificationsProps {
     onBack?: () => void;
     headerVisible?: boolean;
     onSettings?: () => void;
+    onNavigateToPost: (postId: string) => void;
+    onNavigateToProfile: (userId: string) => void;
+    onNavigateToMessages: () => void;
 }
 
-const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = true, onSettings }) => {
+const Notifications: React.FC<NotificationsProps> = ({ 
+    onBack, 
+    headerVisible = true, 
+    onSettings,
+    onNavigateToPost,
+    onNavigateToProfile,
+    onNavigateToMessages
+}) => {
     const [filter, setFilter] = useState<'all' | 'verified' | 'mentions'>('all');
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [isMarkingAll, setIsMarkingAll] = useState(false);
     
     useEffect(() => {
         if (auth.currentUser) {
@@ -24,7 +35,48 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = t
         }
     }, []);
 
+    const handleNotificationClick = async (notif: Notification) => {
+        // 1. Mark as read in background
+        if (!notif.read && auth.currentUser) {
+            markNotificationRead(auth.currentUser.uid, notif.id);
+        }
+
+        // 2. Navigate based on type
+        switch (notif.type) {
+            case 'like':
+            case 'comment':
+            case 'mention':
+            case 'repost':
+                if (notif.targetId) {
+                    onNavigateToPost(notif.targetId);
+                } else if (notif.user) {
+                    // Fallback to user profile if post ID missing
+                    onNavigateToProfile(notif.user.id);
+                }
+                break;
+            case 'follow':
+                if (notif.user) {
+                    onNavigateToProfile(notif.user.id);
+                }
+                break;
+            case 'vibe':
+                // Vibe logic would go here, maybe open a viewer
+                break;
+            case 'system':
+                // System message, just stay here or open generic settings
+                break;
+        }
+    };
+
+    const handleMarkAllRead = async () => {
+        if (!auth.currentUser) return;
+        setIsMarkingAll(true);
+        await markAllNotificationsRead(auth.currentUser.uid);
+        setIsMarkingAll(false);
+    };
+
     // Group notifications (Simple Logic)
+    const unreadCount = notifications.filter(n => !n.read).length;
     const today = notifications.filter(n => n.timestamp && (n.timestamp.includes('m') || n.timestamp.includes('h') || n.timestamp === 'Just now'));
     const older = notifications.filter(n => !today.includes(n));
 
@@ -47,14 +99,26 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = t
                 <div className="px-6 pb-4 flex justify-between items-end">
                     <div>
                         <h2 className="text-3xl font-black text-white tracking-tight">Activity</h2>
-                        <p className="text-zinc-500 text-sm font-medium">Notifications</p>
+                        <p className="text-zinc-500 text-sm font-medium">Notifications {unreadCount > 0 && <span className="text-gsn-green">• {unreadCount} new</span>}</p>
                     </div>
-                    <button 
-                        onClick={onSettings}
-                        className="p-2 bg-zinc-900 border border-white/10 rounded-full hover:bg-white/10 transition-colors"
-                    >
-                        <Settings size={20} className="text-zinc-400" />
-                    </button>
+                    <div className="flex gap-2">
+                        {unreadCount > 0 && (
+                            <button 
+                                onClick={handleMarkAllRead}
+                                disabled={isMarkingAll}
+                                className="p-2 bg-zinc-900 border border-white/10 rounded-full hover:bg-white/10 transition-colors group"
+                                title="Mark all as read"
+                            >
+                                <CheckCheck size={20} className={`text-zinc-400 group-hover:text-gsn-green ${isMarkingAll ? 'animate-pulse' : ''}`} />
+                            </button>
+                        )}
+                        <button 
+                            onClick={onSettings}
+                            className="p-2 bg-zinc-900 border border-white/10 rounded-full hover:bg-white/10 transition-colors"
+                        >
+                            <Settings size={20} className="text-zinc-400" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filter Pills */}
@@ -91,7 +155,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = t
                         <h3 className="px-4 text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Recent</h3>
                         <div className="space-y-2">
                             {today.map(notif => (
-                                <NotificationItem key={notif.id} notif={notif} renderIcon={renderIcon} />
+                                <NotificationItem 
+                                    key={notif.id} 
+                                    notif={notif} 
+                                    renderIcon={renderIcon} 
+                                    onClick={() => handleNotificationClick(notif)}
+                                />
                             ))}
                         </div>
                     </section>
@@ -103,7 +172,12 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = t
                         <h3 className="px-4 text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4">Older</h3>
                         <div className="space-y-2">
                             {older.map(notif => (
-                                <NotificationItem key={notif.id} notif={notif} renderIcon={renderIcon} />
+                                <NotificationItem 
+                                    key={notif.id} 
+                                    notif={notif} 
+                                    renderIcon={renderIcon} 
+                                    onClick={() => handleNotificationClick(notif)}
+                                />
                             ))}
                         </div>
                     </section>
@@ -116,10 +190,14 @@ const Notifications: React.FC<NotificationsProps> = ({ onBack, headerVisible = t
 interface NotificationItemProps {
     notif: Notification;
     renderIcon: (t: string) => React.ReactNode;
+    onClick: () => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notif, renderIcon }) => (
-    <div className={`p-4 mx-2 rounded-2xl flex gap-4 items-start transition-all hover:scale-[1.01] cursor-pointer border ${!notif.read ? 'bg-zinc-900/80 border-gsn-green/20' : 'bg-transparent border-transparent hover:bg-zinc-900/50'}`}>
+const NotificationItem: React.FC<NotificationItemProps> = ({ notif, renderIcon, onClick }) => (
+    <div 
+        onClick={onClick}
+        className={`p-4 mx-2 rounded-2xl flex gap-4 items-start transition-all hover:scale-[1.01] active:scale-95 cursor-pointer border ${!notif.read ? 'bg-zinc-900/80 border-gsn-green/20' : 'bg-transparent border-transparent hover:bg-zinc-900/50'}`}
+    >
         <div className="relative shrink-0">
             <div className="w-12 h-12">
                 {notif.type === 'system' ? (
@@ -166,7 +244,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notif, renderIcon }
         
         {notif.type === 'follow' && (
             <button className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:bg-gsn-green transition-colors self-center shrink-0">
-                Follow Back
+                View Profile
             </button>
         )}
     </div>

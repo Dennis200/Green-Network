@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { MapPin, Users, Clock, Navigation, Zap, Flame, Coffee, Gamepad, Trees, X, Radar, Shield, Activity, Target } from 'lucide-react';
 import { MOCK_LINKUPS, CURRENT_USER } from '../constants';
 import { LinkUpSession } from '../types';
-import PageGuide from './PageGuide';
 
 const LinkUp: React.FC = () => {
     const [isHosting, setIsHosting] = useState(false);
@@ -36,15 +35,6 @@ const LinkUp: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-black pb-24 md:pb-0 relative flex flex-col md:flex-row overflow-hidden font-sans">
-            <PageGuide 
-                pageKey="linkup"
-                steps={[
-                    { title: "Live Radar", description: "See active smokers, sessions, and events nearby in real-time.", icon: <Radar size={20} /> },
-                    { title: "Broadcast", description: "Start your own signal to host a sesh or meet new people. You control the duration.", icon: <Zap size={20} /> },
-                    { title: "Stay Safe", description: "Your location is only approximate. Always meet in public spaces and stay aware of your surroundings.", icon: <Shield size={20} /> }
-                ]}
-            />
-
             {/* --- IMMERSIVE MAP BACKGROUND --- */}
             <div className="absolute inset-0 z-0 pointer-events-none bg-[#050505]">
                  {/* Radial Gradient Glow */}
