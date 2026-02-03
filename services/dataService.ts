@@ -30,7 +30,7 @@ export const createPost = async (postData: Partial<Post>, user: User) => {
         reposts: 0,
         views: 0,
         shares: 0,
-        timestamp: new Date().toLocaleDateString(),
+        timestamp: new Date().toISOString(),
         tags: postData.tags || [],
         isMonetized: false,
         ...postData
@@ -46,9 +46,30 @@ export const subscribeToPosts = (onUpdate: (posts: Post[]) => void) => {
         const data = snapshot.val();
         if (data) {
             const postsArray = Object.values(data) as Post[];
-            onUpdate(postsArray.reverse());
+            // Sort by timestamp desc
+            onUpdate(postsArray.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
         } else {
             onUpdate([]);
+        }
+    });
+};
+
+export const getPostById = async (postId: string): Promise<Post | null> => {
+    const postRef = ref(db, `posts/${postId}`);
+    const snapshot = await get(postRef);
+    if (snapshot.exists()) {
+        return snapshot.val() as Post;
+    }
+    return null;
+};
+
+export const subscribeToPost = (postId: string, onUpdate: (post: Post | null) => void) => {
+    const postRef = ref(db, `posts/${postId}`);
+    return onValue(postRef, (snapshot) => {
+        if (snapshot.exists()) {
+            onUpdate(snapshot.val() as Post);
+        } else {
+            onUpdate(null);
         }
     });
 };
@@ -163,7 +184,7 @@ export const subscribeToComments = (postId: string, onUpdate: (comments: Comment
         const data = snapshot.val();
         if (data) {
             const commentsArray = Object.values(data) as Comment[];
-            onUpdate(commentsArray.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+            onUpdate(commentsArray.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
         } else {
             onUpdate([]);
         }
@@ -447,13 +468,6 @@ export const createNotification = async (notifData: Partial<Notification>, recip
 };
 
 export const createSystemAnnouncement = async (message: string) => {
-    // In a real production app with millions of users, this would be a Cloud Function task.
-    // For this implementation, we will push to a 'global_announcements' node that clients listen to, 
-    // OR simply iterate a small set of users if needed (but that's inefficient).
-    // Better approach: Notifications component listens to 'global_announcements' node too.
-    
-    // For simplicity here, we will just add it to a 'system_alerts' collection.
-    // In Notifications.tsx, one would ideally listen to this collection as well.
     const alertsRef = ref(db, 'system_alerts');
     await push(alertsRef, {
         message,
@@ -538,8 +552,7 @@ export const deleteContent = async (type: string, id: string) => {
     let path = '';
     switch(type) {
         case 'Post': path = `posts/${id}`; break;
-        case 'Comment': path = `comments/${id}`; break; // Note: Comments structure might need parentId lookup in real app
-        // Add other cases
+        case 'Comment': path = `comments/${id}`; break; 
     }
     if (path) {
         await remove(ref(db, path));

@@ -608,12 +608,13 @@ export default function App() {
       case ViewState.MARKETPLACE:
         return <Marketplace onNavigateToChat={() => setView(ViewState.CHAT)} startCreating={marketplaceStartCreate} />;
       case ViewState.POST_DETAILS:
-        const post = MOCK_POSTS.find(p => p.id === selectedPostId);
-        // Fallback for mock post if not found, in real app would fetch
-        if (!post) return <Feed currentUser={currentUser} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} onQuotePost={handleQuote} />;
+        if (!selectedPostId) {
+            setView(ViewState.FEED);
+            return null;
+        }
         return (
             <PostDetail 
-                post={post} 
+                postId={selectedPostId} 
                 currentUser={currentUser}
                 onBack={() => setView(ViewState.FEED)} 
                 onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} 

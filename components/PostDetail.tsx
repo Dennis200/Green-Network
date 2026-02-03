@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Heart, MessageCircle, Share2, MoreHorizontal, Image, Send, Zap, Flame, Repeat } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Share2, MoreHorizontal, Image, Send, Zap, Flame, Repeat, RefreshCw } from 'lucide-react';
 import { Post, Comment, User } from '../types';
 import MediaViewer from './MediaViewer';
 import ReportModal from './ReportModal';
 import { MoreMenu, ShareSheet, RepostMenu } from './Menus';
 import { auth } from '../services/firebase';
-import { checkIsLiked, toggleLikePost, incrementView, incrementShare, repostPost, addComment, subscribeToComments } from '../services/dataService';
+import { checkIsLiked, toggleLikePost, incrementView, incrementShare, repostPost, addComment, subscribeToComments, subscribeToPost } from '../services/dataService';
 import { formatTimeShort } from '../utils';
 
 interface PostDetailProps {
-    post: Post;
+    postId: string; // Changed from post object to ID for data independence
     currentUser: User;
     onBack: () => void;
     onNavigateToProfile: (id: string) => void;
@@ -20,13 +20,16 @@ interface PostDetailProps {
     highlightCommentId?: string | null;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch, onQuote, highlightCommentId }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ postId, currentUser, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch, onQuote, highlightCommentId }) => {
+    const [post, setPost] = useState<Post | null>(null);
+    const [loading, setLoading] = useState(true);
+    
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(post.likes);
-    const [shareCount, setShareCount] = useState(post.shares || 0);
-    const [repostCount, setRepostCount] = useState(post.reposts || 0);
+    const [likeCount, setLikeCount] = useState(0);
+    const [shareCount, setShareCount] = useState(0);
+    const [repostCount, setRepostCount] = useState(0);
     const [bookmarked, setBookmarked] = useState(false);
     const [viewerMedia, setViewerMedia] = useState<{media: string[], index: number} | null>(null);
     const [showShareSheet, setShowShareSheet] = useState(false);
@@ -34,19 +37,37 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
     const [showReportModal, setShowReportModal] = useState(false);
     const [showRepostMenu, setShowRepostMenu] = useState(false);
 
+    // Fetch Post Data
     useEffect(() => {
-        if (auth.currentUser) {
+        const unsubPost = subscribeToPost(postId, (data) => {
+            setPost(data);
+            setLoading(false);
+            if (data) {
+                setLikeCount(data.likes);
+                setShareCount(data.shares);
+                setRepostCount(data.reposts);
+            }
+        });
+        return () => unsubPost();
+    }, [postId]);
+
+    // Check Like Status & Views
+    useEffect(() => {
+        if (auth.currentUser && post) {
             checkIsLiked(post.id, auth.currentUser.uid).then(setIsLiked);
             incrementView(post.id, auth.currentUser.uid);
         }
-        
-        const unsubComments = subscribeToComments(post.id, (loadedComments) => {
+    }, [post?.id]);
+
+    // Fetch Comments
+    useEffect(() => {
+        const unsubComments = subscribeToComments(postId, (loadedComments) => {
             setComments(loadedComments);
         });
-
         return () => unsubComments();
-    }, [post.id]);
+    }, [postId]);
 
+    // Highlight Comment Logic
     useEffect(() => {
         if (highlightCommentId && comments.length > 0) {
             const element = document.getElementById(`comment-${highlightCommentId}`);
@@ -61,7 +82,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
     }, [highlightCommentId, comments]);
 
     const handleLike = () => {
-        if (!auth.currentUser) return;
+        if (!auth.currentUser || !post) return;
         const newStatus = !isLiked;
         setIsLiked(newStatus);
         setLikeCount(prev => newStatus ? prev + 1 : Math.max(0, prev - 1));
@@ -74,7 +95,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
     }
 
     const handlePostComment = async () => {
-        if (!newComment.trim() || !auth.currentUser) return;
+        if (!newComment.trim() || !auth.currentUser || !post) return;
         
         try {
             await addComment(post.id, newComment, currentUser, post.user.id);
@@ -85,6 +106,7 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
     }
 
     const handleShare = async () => {
+        if(!post) return;
         setShareCount(prev => prev + 1);
         incrementShare(post.id);
         setShowShareSheet(true);
@@ -95,14 +117,14 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
     }
 
     const performRepost = async () => {
-        if (!auth.currentUser) return;
+        if (!auth.currentUser || !post) return;
         setRepostCount(prev => prev + 1);
         await repostPost(post, currentUser);
         setShowRepostMenu(false);
     }
 
     const performQuote = () => {
-        if (onQuote) onQuote(post);
+        if (onQuote && post) onQuote(post);
         setShowRepostMenu(false);
     }
 
@@ -115,6 +137,26 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
             return <span key={index}>{part}</span>;
         });
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <RefreshCw className="animate-spin text-gsn-green" size={32} />
+            </div>
+        );
+    }
+
+    if (!post) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8">
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-white mb-2">Post not found</h2>
+                    <p className="text-zinc-500 mb-6">This post may have been deleted.</p>
+                    <button onClick={onBack} className="px-6 py-2 bg-white text-black font-bold rounded-full">Go Back</button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-black pb-20 md:pb-0 animate-in slide-in-from-right duration-300">
