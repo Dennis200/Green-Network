@@ -1,4 +1,5 @@
 
+
 export interface User {
   id: string;
   name: string;
@@ -275,5 +276,7 @@ export enum ViewState {
   SETTINGS = 'SETTINGS',
   WALLET = 'WALLET',
   SAVED = 'SAVED',
-  LIVESTREAM = 'LIVESTREAM'
+  LIVESTREAM = 'LIVESTREAM',
+  CONNECT_PEOPLE = 'CONNECT_PEOPLE',
+  GROW_JOURNAL = 'GROW_JOURNAL'
 }

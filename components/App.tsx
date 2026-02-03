@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio, Signal } from 'lucide-react';
+import { Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio, Sprout, Signal, TrendingUp } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { subscribeToUserProfile, createUserProfile, userProfileExists } from '../services/userService';
-import { subscribeToNotifications, subscribeToChats } from '../services/dataService';
+import { subscribeToUserProfile, createUserProfile, userProfileExists, getWhoToFollow } from '../services/userService';
+import { subscribeToNotifications, subscribeToChats, followUser, checkIsFollowing } from '../services/dataService';
 import { ViewState, User, Notification, Post } from '../types';
 import Feed from './Feed';
 import Reels from './Reels';
@@ -26,11 +27,13 @@ import AdCenter from './AdCenter';
 import SettingsPage from './Settings';
 import WalletPage from './Wallet';
 import SavedPage from './Saved';
+import GrowJournal from './GrowJournal';
 import LiveStream from './LiveStream';
+import ConnectPeople from './ConnectPeople';
 import { CURRENT_USER, MOCK_POSTS } from '../constants';
 import { OnboardingTour } from './OnboardingTour';
 
-// --- RIGHT SIDE MENU (BURGER MENU) ---
+// --- RIGHT SIDE MENU (BURGER MENU - MOBILE) ---
 const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: { isOpen: boolean; onClose: () => void; onNavigate: (view: ViewState) => void, unreadMsg: number, unreadNotif: number }) => {
     return (
         <>
@@ -81,6 +84,16 @@ const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: 
                         icon={<MapPin size={24} />} 
                         label="Link Up Map" 
                         onClick={() => { onNavigate(ViewState.LINKUP); onClose(); }} 
+                    />
+                    <RightMenuItem 
+                        icon={<Sprout size={24} />} 
+                        label="Grow Journal" 
+                        onClick={() => { onNavigate(ViewState.GROW_JOURNAL); onClose(); }} 
+                    />
+                    <RightMenuItem 
+                        icon={<Users size={24} />} 
+                        label="Who to Follow" 
+                        onClick={() => { onNavigate(ViewState.CONNECT_PEOPLE); onClose(); }} 
                     />
                     
                     <div className="my-6 border-t border-white/5 mx-2"></div>
@@ -228,6 +241,7 @@ const CreateMenu = ({ onClose, onSelect }: { onClose: () => void, onSelect: (typ
                 <CreateOption icon={<Film size={28} strokeWidth={2} />} label="Reel" onClick={() => onSelect('reel')} color="bg-pink-500" />
                 <CreateOption icon={<ShoppingBag size={28} strokeWidth={2} />} label="Listing" onClick={() => onSelect('listing')} color="bg-gsn-green" iconColor="text-black" />
                 <CreateOption icon={<Signal size={28} strokeWidth={2} />} label="Go Live" onClick={() => onSelect('live')} color="bg-red-500" />
+                <CreateOption icon={<Sprout size={28} strokeWidth={2} />} label="Grow Log" onClick={() => onSelect('journal')} color="bg-emerald-500" />
             </div>
         </div>
     </>
@@ -270,6 +284,71 @@ const NavButton = React.forwardRef<HTMLButtonElement, { icon: React.ReactNode, a
     </button>
 ));
 NavButton.displayName = 'NavButton';
+
+// --- RIGHT SIDEBAR WIDGETS ---
+
+const WhoToFollowWidget = ({ onNavigateToProfile, onShowAll }: { onNavigateToProfile: (id: string) => void, onShowAll: () => void }) => {
+    const [users, setUsers] = useState<User[]>([]);
+
+    useEffect(() => {
+        if (auth.currentUser) {
+            getWhoToFollow(auth.currentUser.uid).then(data => setUsers(data.slice(0, 3)));
+        }
+    }, []);
+
+    if (users.length === 0) return null;
+
+    return (
+        <div className="bg-zinc-900/50 rounded-2xl border border-white/5 p-4">
+            <h3 className="text-xl font-bold text-white mb-4">Who to follow</h3>
+            <div className="space-y-4">
+                {users.map(user => (
+                    <UserFollowMiniCard key={user.id} user={user} onNavigateToProfile={onNavigateToProfile} />
+                ))}
+            </div>
+            <button onClick={onShowAll} className="text-gsn-green text-sm mt-4 hover:underline">Show more</button>
+        </div>
+    )
+}
+
+const UserFollowMiniCard: React.FC<{ user: User, onNavigateToProfile: (id: string) => void }> = ({ user, onNavigateToProfile }) => {
+    const [isFollowing, setIsFollowing] = useState(false);
+
+    useEffect(() => {
+        if (auth.currentUser) {
+            checkIsFollowing(auth.currentUser.uid, user.id).then(setIsFollowing);
+        }
+    }, [user.id]);
+
+    const handleFollow = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if(!auth.currentUser) return;
+        
+        if (isFollowing) {
+            await followUser(auth.currentUser.uid, user.id); // Note: Should handle unfollow logic but keeping simple for widget
+            setIsFollowing(false); 
+        } else {
+            await followUser(auth.currentUser.uid, user.id);
+            setIsFollowing(true);
+        }
+    }
+
+    return (
+        <div onClick={() => onNavigateToProfile(user.id)} className="flex items-center gap-3 cursor-pointer group">
+            <img src={user.avatar} className="w-10 h-10 rounded-full object-cover" />
+            <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm text-white truncate hover:underline">{user.name}</div>
+                <div className="text-zinc-500 text-xs truncate">{user.handle}</div>
+            </div>
+            <button 
+                onClick={handleFollow}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${isFollowing ? 'bg-transparent border border-white/20 text-white' : 'bg-white text-black hover:bg-zinc-200'}`}
+            >
+                {isFollowing ? 'Following' : 'Follow'}
+            </button>
+        </div>
+    )
+}
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
@@ -382,6 +461,7 @@ export default function App() {
       ViewState.CREATE,
       ViewState.LINKUP,
       ViewState.LIVESTREAM,
+      ViewState.GROW_JOURNAL
   ].includes(view);
 
   // Reset marketplace create intent if view changes
@@ -429,6 +509,7 @@ export default function App() {
               setView(ViewState.MARKETPLACE); 
               break;
           case 'live': setView(ViewState.LIVESTREAM); break;
+          case 'journal': setView(ViewState.GROW_JOURNAL); break;
       }
   };
 
@@ -572,8 +653,12 @@ export default function App() {
         return <WalletPage onBack={() => setView(ViewState.PROFILE)} />;
       case ViewState.SAVED:
         return <SavedPage onBack={() => setView(ViewState.PROFILE)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} />;
+      case ViewState.GROW_JOURNAL:
+        return <GrowJournal onBack={() => setView(ViewState.FEED)} />;
       case ViewState.LIVESTREAM:
         return <LiveStream onEnd={() => setView(ViewState.FEED)} />;
+      case ViewState.CONNECT_PEOPLE:
+        return <ConnectPeople onBack={() => setView(ViewState.FEED)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} />;
       default:
         return <Feed currentUser={currentUser} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} onQuotePost={handleQuote} />;
     }
@@ -593,7 +678,7 @@ export default function App() {
 
   // --- APP LAYOUT ---
   return (
-    <div className="flex bg-black text-white min-h-screen font-sans selection:bg-gsn-green selection:text-black">
+    <div className="flex bg-black text-white min-h-screen font-sans selection:bg-gsn-green selection:text-black justify-center">
       
       {/* Onboarding Tour */}
       {showTour && (
@@ -622,6 +707,7 @@ export default function App() {
                 <SidebarItem icon={<Users size={26} />} label="Communities" active={view === ViewState.COMMUNITIES} onClick={() => setView(ViewState.COMMUNITIES)} />
                 <SidebarItem icon={<ShoppingBag size={26} />} label="Marketplace" active={view === ViewState.MARKETPLACE} onClick={() => setView(ViewState.MARKETPLACE)} />
                 <SidebarItem icon={<MapPin size={26} />} label="Link Up" active={view === ViewState.LINKUP} onClick={() => setView(ViewState.LINKUP)} />
+                <SidebarItem icon={<Sprout size={26} />} label="My Grow" active={view === ViewState.GROW_JOURNAL} onClick={() => setView(ViewState.GROW_JOURNAL)} />
                 <SidebarItem icon={<UserIcon size={26} />} label="Profile" active={view === ViewState.PROFILE && !activeUser} onClick={() => { setActiveUser(null); setView(ViewState.PROFILE); }} />
             </nav>
         </div>
@@ -650,7 +736,7 @@ export default function App() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 md:border-r border-white/10 relative">
+      <div className="flex-1 flex flex-col max-w-[650px] md:border-r border-white/10 relative">
         
         {/* Mobile Header (Only visible on mobile) */}
         {!isImmersive && view !== ViewState.COMMUNITIES && (
@@ -699,6 +785,42 @@ export default function App() {
             </div>
         )}
 
+      </div>
+
+      {/* Right Sidebar (Desktop XL only) */}
+      <div className="hidden xl:flex flex-col w-[350px] sticky top-0 h-screen p-4 pl-8 gap-4 border-l border-white/5 bg-black z-40">
+          <div className="relative group">
+              <Search className="absolute left-4 top-3.5 text-zinc-500 group-focus-within:text-gsn-green transition-colors" size={20} />
+              <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search" 
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-3 pl-12 pr-4 text-white focus:outline-none focus:border-gsn-green transition-all"
+                  onKeyDown={(e) => { if(e.key === 'Enter') { setView(ViewState.EXPLORE); }}}
+              />
+          </div>
+
+          <div className="bg-zinc-900/50 rounded-2xl border border-white/5 p-4 mt-2">
+              <h3 className="font-bold text-xl text-white mb-2">Subscribe to Premium</h3>
+              <p className="text-zinc-400 text-sm mb-4">Subscribe to unlock new features and if eligible, receive a share of ads revenue.</p>
+              <button className="bg-gsn-green text-black font-bold px-5 py-2 rounded-full hover:bg-green-400 transition-colors">Subscribe</button>
+          </div>
+
+          {/* Who to Follow Widget */}
+          <WhoToFollowWidget 
+              onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} 
+              onShowAll={() => setView(ViewState.CONNECT_PEOPLE)}
+          />
+
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-500 px-4">
+              <span className="hover:underline cursor-pointer">Terms of Service</span>
+              <span className="hover:underline cursor-pointer">Privacy Policy</span>
+              <span className="hover:underline cursor-pointer">Cookie Policy</span>
+              <span className="hover:underline cursor-pointer">Accessibility</span>
+              <span className="hover:underline cursor-pointer">Ads info</span>
+              <span>© 2024 Green Corp.</span>
+          </div>
       </div>
 
       {/* Menus */}

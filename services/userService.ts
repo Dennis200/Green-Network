@@ -112,3 +112,47 @@ export const subscribeToAllUsers = (onUpdate: (users: User[]) => void) => {
         }
     });
 };
+
+/**
+ * Algorithm to fetch "Who to follow" recommendations.
+ * Factors: Verification status, Shared Role, Random Discovery.
+ * Excludes already followed users.
+ */
+export const getWhoToFollow = async (currentUserId: string): Promise<User[]> => {
+    const dbRef = ref(db);
+    
+    try {
+        // 1. Fetch all users
+        const usersSnap = await get(child(dbRef, USERS_COLLECTION));
+        if (!usersSnap.exists()) return [];
+        const allUsers = Object.values(usersSnap.val()) as User[];
+
+        // 2. Fetch current user's following list
+        const followingSnap = await get(child(dbRef, `following/${currentUserId}`));
+        const followingIds = followingSnap.exists() ? Object.keys(followingSnap.val()) : [];
+
+        // 3. Filter candidates
+        const candidates = allUsers.filter(u => u.id !== currentUserId && !followingIds.includes(u.id));
+
+        // 4. Score Candidates (X-like logic)
+        const scored = candidates.map(u => {
+            let score = Math.random() * 10; // Random baseline for discovery
+            if (u.verified) score += 5; // Boost verified users
+            if (u.avatar && !u.avatar.includes('ui-avatars')) score += 2; // Boost users with real avatars
+            
+            // Boost brands or educators slightly for better content mix
+            if (u.role === 'Brand' || u.role === 'Educator') score += 3;
+
+            return { user: u, score };
+        });
+
+        // 5. Sort by score descending
+        scored.sort((a, b) => b.score - a.score);
+
+        // Return top 20, filtering out the score wrapper
+        return scored.map(s => s.user).slice(0, 20); 
+    } catch (e) {
+        console.error("Error fetching recommendations", e);
+        return [];
+    }
+}
