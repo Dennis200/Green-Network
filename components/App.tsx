@@ -1,34 +1,34 @@
-
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio } from 'lucide-react';
+import { Home, Film, MessageCircle, User as UserIcon, ShieldCheck, Plus, Image as ImageIcon, Video, Camera, Mic, PenTool, X, Search, MapPin, Bell, Users, ShoppingBag, Shield, Settings, Bookmark, Star, LogOut, Moon, Zap, ChevronRight, Menu, Megaphone, Wallet, Radio, Signal } from 'lucide-react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from './services/firebase';
-import { subscribeToUserProfile, createUserProfile, userProfileExists } from './services/userService';
-import { subscribeToNotifications, subscribeToChats } from './services/dataService';
-import { ViewState, User, Notification, Post } from './types';
-import Feed from './components/Feed';
-import Reels from './components/Reels';
-import { Profile } from './components/Profile';
-import Chat from './components/Chat';
-import Explore from './components/Explore';
-import CreatePost from './components/CreatePost';
-import CreateVibe from './components/CreateVibe';
-import LinkUp from './components/LinkUp';
-import CreateReel from './components/CreateReel';
-import PostDetail from './components/PostDetail';
-import Notifications from './components/Notifications';
-import Communities from './components/Communities';
-import EditProfile from './components/EditProfile';
-import Marketplace from './components/Marketplace';
-import AdminDashboard from './components/AdminDashboard';
-import Header from './components/Header';
-import LandingPage from './components/LandingPage';
-import AdCenter from './components/AdCenter';
-import SettingsPage from './components/Settings';
-import WalletPage from './components/Wallet';
-import SavedPage from './components/Saved';
-import { CURRENT_USER, MOCK_POSTS } from './constants';
-import { OnboardingTour } from './components/OnboardingTour';
+import { auth } from '../services/firebase';
+import { subscribeToUserProfile, createUserProfile, userProfileExists } from '../services/userService';
+import { subscribeToNotifications, subscribeToChats } from '../services/dataService';
+import { ViewState, User, Notification, Post } from '../types';
+import Feed from './Feed';
+import Reels from './Reels';
+import { Profile } from './Profile';
+import Chat from './Chat';
+import Explore from './Explore';
+import CreatePost from './CreatePost';
+import CreateVibe from './CreateVibe';
+import LinkUp from './LinkUp';
+import CreateReel from './CreateReel';
+import PostDetail from './PostDetail';
+import Notifications from './Notifications';
+import Communities from './Communities';
+import EditProfile from './EditProfile';
+import Marketplace from './Marketplace';
+import AdminDashboard from './AdminDashboard';
+import Header from './Header';
+import LandingPage from './LandingPage';
+import AdCenter from './AdCenter';
+import SettingsPage from './Settings';
+import WalletPage from './Wallet';
+import SavedPage from './Saved';
+import LiveStream from './LiveStream';
+import { CURRENT_USER, MOCK_POSTS } from '../constants';
+import { OnboardingTour } from './OnboardingTour';
 
 // --- RIGHT SIDE MENU (BURGER MENU) ---
 const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: { isOpen: boolean; onClose: () => void; onNavigate: (view: ViewState) => void, unreadMsg: number, unreadNotif: number }) => {
@@ -204,6 +204,73 @@ const MenuItem = ({ icon, label, onClick }: { icon: React.ReactNode, label: stri
     </button>
 );
 
+// --- SUB COMPONENTS ---
+
+const CreateOption = ({ icon, label, onClick, color, iconColor = 'text-white' }: any) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-3 group w-full">
+        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 active:scale-95 ${color} ${iconColor}`}>
+            {icon}
+        </div>
+        <span className="text-white font-bold text-xs tracking-wide">{label}</span>
+    </button>
+);
+
+const CreateMenu = ({ onClose, onSelect }: { onClose: () => void, onSelect: (type: string) => void }) => (
+    <>
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-[2.5rem] border-t border-white/10 p-8 pb-safe animate-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-8" />
+            <h3 className="text-center font-black text-white text-2xl mb-8 tracking-tight">CREATE</h3>
+            
+            <div className="grid grid-cols-3 gap-y-8 gap-x-4 mb-4">
+                <CreateOption icon={<ImageIcon size={28} strokeWidth={2} />} label="Post" onClick={() => onSelect('post')} color="bg-blue-500" />
+                <CreateOption icon={<Camera size={28} strokeWidth={2} />} label="Vibe" onClick={() => onSelect('vibe')} color="bg-purple-500" />
+                <CreateOption icon={<Film size={28} strokeWidth={2} />} label="Reel" onClick={() => onSelect('reel')} color="bg-pink-500" />
+                <CreateOption icon={<ShoppingBag size={28} strokeWidth={2} />} label="Listing" onClick={() => onSelect('listing')} color="bg-gsn-green" iconColor="text-black" />
+                <CreateOption icon={<Signal size={28} strokeWidth={2} />} label="Go Live" onClick={() => onSelect('live')} color="bg-red-500" />
+            </div>
+        </div>
+    </>
+);
+
+interface SidebarItemProps {
+    icon: React.ReactNode;
+    label: string;
+    active: boolean;
+    onClick: () => void;
+    badge?: number;
+}
+
+const SidebarItem = ({ icon, label, active, onClick, badge }: SidebarItemProps) => (
+    <button 
+        onClick={onClick}
+        className={`w-full flex items-center gap-4 p-4 rounded-full transition-all group relative ${active ? 'font-black' : 'hover:bg-white/5'}`}
+    >
+        <div className={`relative ${active ? 'text-gsn-green' : 'text-white group-hover:text-gsn-green transition-colors'}`}>
+            {icon}
+            {badge && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-black px-1">
+                    {badge > 9 ? '9+' : badge}
+                </span>
+            )}
+        </div>
+        <span className={`text-xl hidden xl:block ${active ? 'text-white' : 'text-zinc-400 group-hover:text-white transition-colors'}`}>
+            {label}
+        </span>
+    </button>
+);
+
+const NavButton = React.forwardRef<HTMLButtonElement, { icon: React.ReactNode, active: boolean, onClick: () => void }>(({ icon, active, onClick }, ref) => (
+    <button 
+        ref={ref}
+        onClick={onClick}
+        className={`p-2 rounded-xl transition-all ${active ? 'text-gsn-green scale-110' : 'text-zinc-500 hover:text-white'}`}
+    >
+        {icon}
+    </button>
+));
+NavButton.displayName = 'NavButton';
+
 // --- MAIN APP COMPONENT ---
 export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.FEED);
@@ -211,6 +278,8 @@ export default function App() {
   const [activeUser, setActiveUser] = useState<string | null>(null); // ID of user being viewed
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER); // Logged in user state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
+  const [targetChatUserId, setTargetChatUserId] = useState<string | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [postToQuote, setPostToQuote] = useState<Post | null>(null);
   
@@ -311,7 +380,8 @@ export default function App() {
       ViewState.CREATE_REEL, 
       ViewState.CREATE_VIBE,
       ViewState.CREATE,
-      ViewState.LINKUP
+      ViewState.LINKUP,
+      ViewState.LIVESTREAM,
   ].includes(view);
 
   // Reset marketplace create intent if view changes
@@ -358,6 +428,7 @@ export default function App() {
               setMarketplaceStartCreate(true);
               setView(ViewState.MARKETPLACE); 
               break;
+          case 'live': setView(ViewState.LIVESTREAM); break;
       }
   };
 
@@ -434,7 +505,7 @@ export default function App() {
             />
         )
       case ViewState.CHAT:
-        return <Chat />;
+        return <Chat initialUserId={targetChatUserId} />;
       case ViewState.EXPLORE:
         return <Explore initialQuery={searchQuery} />;
       case ViewState.CREATE:
@@ -468,6 +539,7 @@ export default function App() {
                 onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }} 
                 onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} 
                 onQuote={handleQuote}
+                highlightCommentId={highlightCommentId}
             />
         );
       case ViewState.NOTIFICATIONS:
@@ -476,9 +548,16 @@ export default function App() {
                 onBack={() => setView(ViewState.FEED)} 
                 headerVisible={headerVisible} 
                 onSettings={() => setView(ViewState.SETTINGS)} 
-                onNavigateToPost={(id) => { setSelectedPostId(id); setView(ViewState.POST_DETAILS); }}
+                onNavigateToPost={(id, commentId) => { 
+                    setSelectedPostId(id); 
+                    setHighlightCommentId(commentId || null);
+                    setView(ViewState.POST_DETAILS); 
+                }}
                 onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }}
-                onNavigateToMessages={() => setView(ViewState.CHAT)}
+                onNavigateToMessages={(userId) => { 
+                    setTargetChatUserId(userId || null);
+                    setView(ViewState.CHAT); 
+                }}
             />
         );
       case ViewState.COMMUNITIES:
@@ -493,6 +572,8 @@ export default function App() {
         return <WalletPage onBack={() => setView(ViewState.PROFILE)} />;
       case ViewState.SAVED:
         return <SavedPage onBack={() => setView(ViewState.PROFILE)} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} />;
+      case ViewState.LIVESTREAM:
+        return <LiveStream onEnd={() => setView(ViewState.FEED)} />;
       default:
         return <Feed currentUser={currentUser} onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onSearch={()=>{}} onNavigateToCreateStory={()=>{}} onNavigateToMessages={()=>{}} followingIds={following} onNavigateToReels={() => setView(ViewState.REELS)} onQuotePost={handleQuote} />;
     }
@@ -643,69 +724,3 @@ export default function App() {
     </div>
   );
 }
-
-// --- SUB COMPONENTS ---
-
-const CreateMenu = ({ onClose, onSelect }: { onClose: () => void, onSelect: (type: string) => void }) => (
-    <>
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-[2.5rem] border-t border-white/10 p-8 pb-safe animate-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-8" />
-            <h3 className="text-center font-black text-white text-2xl mb-8 tracking-tight">CREATE</h3>
-            
-            <div className="grid grid-cols-4 gap-4 mb-4">
-                <CreateOption icon={<ImageIcon size={28} strokeWidth={2} />} label="Post" onClick={() => onSelect('post')} color="bg-blue-500" />
-                <CreateOption icon={<Camera size={28} strokeWidth={2} />} label="Vibe" onClick={() => onSelect('vibe')} color="bg-purple-500" />
-                <CreateOption icon={<Film size={28} strokeWidth={2} />} label="Reel" onClick={() => onSelect('reel')} color="bg-pink-500" />
-                <CreateOption icon={<ShoppingBag size={28} strokeWidth={2} />} label="Listing" onClick={() => onSelect('listing')} color="bg-gsn-green" iconColor="text-black" />
-            </div>
-        </div>
-    </>
-);
-
-const CreateOption = ({ icon, label, onClick, color, iconColor = 'text-white' }: any) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-3 group w-full">
-        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 active:scale-95 ${color} ${iconColor}`}>
-            {icon}
-        </div>
-        <span className="text-white font-bold text-xs tracking-wide">{label}</span>
-    </button>
-);
-
-interface SidebarItemProps {
-    icon: React.ReactNode;
-    label: string;
-    active: boolean;
-    onClick: () => void;
-    badge?: number;
-}
-
-const SidebarItem = ({ icon, label, active, onClick, badge }: SidebarItemProps) => (
-    <button 
-        onClick={onClick}
-        className={`w-full flex items-center gap-4 p-4 rounded-full transition-all group relative ${active ? 'font-black' : 'hover:bg-white/5'}`}
-    >
-        <div className={`relative ${active ? 'text-gsn-green' : 'text-white group-hover:text-gsn-green transition-colors'}`}>
-            {icon}
-            {badge && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-black px-1">
-                    {badge > 9 ? '9+' : badge}
-                </span>
-            )}
-        </div>
-        <span className={`text-xl hidden xl:block ${active ? 'text-white' : 'text-zinc-400 group-hover:text-white transition-colors'}`}>
-            {label}
-        </span>
-    </button>
-);
-
-const NavButton = React.forwardRef<HTMLButtonElement, { icon: React.ReactNode, active: boolean, onClick: () => void }>(({ icon, active, onClick }, ref) => (
-    <button 
-        ref={ref}
-        onClick={onClick}
-        className={`p-2 rounded-xl transition-all ${active ? 'text-gsn-green scale-110' : 'text-zinc-500 hover:text-white'}`}
-    >
-        {icon}
-    </button>
-));
-NavButton.displayName = 'NavButton';

@@ -19,6 +19,8 @@ export const createUserProfile = async (uid: string, data: Partial<User>) => {
         ...data,
         walletBalance: 100, // Default starting balance
         verified: false,
+        isAdmin: false,
+        isBanned: false,
         role: 'Smoker'
     };
 
@@ -55,6 +57,26 @@ export const updateUserProfile = async (uid: string, data: Partial<User>) => {
         console.error("Error updating user profile:", error);
         throw error;
     }
+};
+
+// --- ADMIN FUNCTIONS ---
+
+export const toggleUserVerification = async (uid: string, currentStatus: boolean) => {
+    const userRef = ref(db, `${USERS_COLLECTION}/${uid}`);
+    await update(userRef, { verified: !currentStatus });
+};
+
+export const toggleUserBan = async (uid: string, currentStatus: boolean) => {
+    const userRef = ref(db, `${USERS_COLLECTION}/${uid}`);
+    await update(userRef, { isBanned: !currentStatus });
+};
+
+export const updateUserRole = async (uid: string, newRole: string, makeAdmin: boolean = false) => {
+    const userRef = ref(db, `${USERS_COLLECTION}/${uid}`);
+    await update(userRef, { 
+        role: newRole,
+        isAdmin: makeAdmin 
+    });
 };
 
 /**

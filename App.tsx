@@ -30,12 +30,6 @@ import SavedPage from './components/Saved';
 import { CURRENT_USER, MOCK_POSTS } from './constants';
 import { OnboardingTour } from './components/OnboardingTour';
 
-// ... RightSideMenu and SideMenu components remain the same ...
-// Including them here for context in the full file return would be huge, 
-// so I'll reuse the existing ones implicitly by focusing on the App component changes unless full replacement is needed.
-// However, I need to output the full file content. 
-// I will include the unchanged parts to ensure file integrity.
-
 // --- RIGHT SIDE MENU (BURGER MENU) ---
 const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: { isOpen: boolean; onClose: () => void; onNavigate: (view: ViewState) => void, unreadMsg: number, unreadNotif: number }) => {
     return (
@@ -210,6 +204,72 @@ const MenuItem = ({ icon, label, onClick }: { icon: React.ReactNode, label: stri
     </button>
 );
 
+// --- SUB COMPONENTS ---
+
+const CreateOption = ({ icon, label, onClick, color, iconColor = 'text-white' }: any) => (
+    <button onClick={onClick} className="flex flex-col items-center gap-3 group w-full">
+        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 active:scale-95 ${color} ${iconColor}`}>
+            {icon}
+        </div>
+        <span className="text-white font-bold text-xs tracking-wide">{label}</span>
+    </button>
+);
+
+const CreateMenu = ({ onClose, onSelect }: { onClose: () => void, onSelect: (type: string) => void }) => (
+    <>
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-[2.5rem] border-t border-white/10 p-8 pb-safe animate-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-8" />
+            <h3 className="text-center font-black text-white text-2xl mb-8 tracking-tight">CREATE</h3>
+            
+            <div className="grid grid-cols-4 gap-4 mb-4">
+                <CreateOption icon={<ImageIcon size={28} strokeWidth={2} />} label="Post" onClick={() => onSelect('post')} color="bg-blue-500" />
+                <CreateOption icon={<Camera size={28} strokeWidth={2} />} label="Vibe" onClick={() => onSelect('vibe')} color="bg-purple-500" />
+                <CreateOption icon={<Film size={28} strokeWidth={2} />} label="Reel" onClick={() => onSelect('reel')} color="bg-pink-500" />
+                <CreateOption icon={<ShoppingBag size={28} strokeWidth={2} />} label="Listing" onClick={() => onSelect('listing')} color="bg-gsn-green" iconColor="text-black" />
+            </div>
+        </div>
+    </>
+);
+
+interface SidebarItemProps {
+    icon: React.ReactNode;
+    label: string;
+    active: boolean;
+    onClick: () => void;
+    badge?: number;
+}
+
+const SidebarItem = ({ icon, label, active, onClick, badge }: SidebarItemProps) => (
+    <button 
+        onClick={onClick}
+        className={`w-full flex items-center gap-4 p-4 rounded-full transition-all group relative ${active ? 'font-black' : 'hover:bg-white/5'}`}
+    >
+        <div className={`relative ${active ? 'text-gsn-green' : 'text-white group-hover:text-gsn-green transition-colors'}`}>
+            {icon}
+            {badge && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-black px-1">
+                    {badge > 9 ? '9+' : badge}
+                </span>
+            )}
+        </div>
+        <span className={`text-xl hidden xl:block ${active ? 'text-white' : 'text-zinc-400 group-hover:text-white transition-colors'}`}>
+            {label}
+        </span>
+    </button>
+);
+
+const NavButton = React.forwardRef<HTMLButtonElement, { icon: React.ReactNode, active: boolean, onClick: () => void }>(({ icon, active, onClick }, ref) => (
+    <button 
+        ref={ref}
+        onClick={onClick}
+        className={`p-2 rounded-xl transition-all ${active ? 'text-gsn-green scale-110' : 'text-zinc-500 hover:text-white'}`}
+    >
+        {icon}
+    </button>
+));
+NavButton.displayName = 'NavButton';
+
 // --- MAIN APP COMPONENT ---
 export default function App() {
   const [view, setView] = useState<ViewState>(ViewState.FEED);
@@ -217,6 +277,8 @@ export default function App() {
   const [activeUser, setActiveUser] = useState<string | null>(null); // ID of user being viewed
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER); // Logged in user state
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [highlightCommentId, setHighlightCommentId] = useState<string | null>(null);
+  const [targetChatUserId, setTargetChatUserId] = useState<string | null>(null);
   const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
   const [postToQuote, setPostToQuote] = useState<Post | null>(null);
   
@@ -316,7 +378,8 @@ export default function App() {
       ViewState.REELS,
       ViewState.CREATE_REEL, 
       ViewState.CREATE_VIBE,
-      ViewState.CREATE
+      ViewState.CREATE,
+      ViewState.LINKUP
   ].includes(view);
 
   // Reset marketplace create intent if view changes
@@ -439,7 +502,7 @@ export default function App() {
             />
         )
       case ViewState.CHAT:
-        return <Chat />;
+        return <Chat initialUserId={targetChatUserId} />;
       case ViewState.EXPLORE:
         return <Explore initialQuery={searchQuery} />;
       case ViewState.CREATE:
@@ -457,7 +520,7 @@ export default function App() {
       case ViewState.CREATE_REEL:
         return <CreateReel onExit={() => setView(ViewState.REELS)} onPostComplete={() => setView(ViewState.REELS)} />;
       case ViewState.LINKUP:
-        return <LinkUp />;
+        return <LinkUp onBack={() => setView(ViewState.FEED)} />;
       case ViewState.MARKETPLACE:
         return <Marketplace onNavigateToChat={() => setView(ViewState.CHAT)} startCreating={marketplaceStartCreate} />;
       case ViewState.POST_DETAILS:
@@ -473,10 +536,27 @@ export default function App() {
                 onNavigateToCommunity={(id) => { setSelectedCommunityId(id); setView(ViewState.COMMUNITIES); }} 
                 onSearch={(q) => { setSearchQuery(q); setView(ViewState.EXPLORE); }} 
                 onQuote={handleQuote}
+                highlightCommentId={highlightCommentId}
             />
         );
       case ViewState.NOTIFICATIONS:
-        return <Notifications onBack={() => setView(ViewState.FEED)} headerVisible={headerVisible} onSettings={() => setView(ViewState.SETTINGS)} />;
+        return (
+            <Notifications 
+                onBack={() => setView(ViewState.FEED)} 
+                headerVisible={headerVisible} 
+                onSettings={() => setView(ViewState.SETTINGS)} 
+                onNavigateToPost={(id, commentId) => { 
+                    setSelectedPostId(id); 
+                    setHighlightCommentId(commentId || null);
+                    setView(ViewState.POST_DETAILS); 
+                }}
+                onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }}
+                onNavigateToMessages={(userId) => { 
+                    setTargetChatUserId(userId || null);
+                    setView(ViewState.CHAT); 
+                }}
+            />
+        );
       case ViewState.COMMUNITIES:
         return <Communities onNavigateToProfile={(id) => { setActiveUser(id); setView(ViewState.PROFILE); }} onBack={() => setView(ViewState.FEED)} headerVisible={false} initialCommunityId={selectedCommunityId} />;
       case ViewState.ADMIN:
@@ -639,69 +719,3 @@ export default function App() {
     </div>
   );
 }
-
-// --- SUB COMPONENTS ---
-
-const CreateMenu = ({ onClose, onSelect }: { onClose: () => void, onSelect: (type: string) => void }) => (
-    <>
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-        <div className="fixed bottom-0 left-0 right-0 z-[101] bg-zinc-900 rounded-t-[2.5rem] border-t border-white/10 p-8 pb-safe animate-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-8" />
-            <h3 className="text-center font-black text-white text-2xl mb-8 tracking-tight">CREATE</h3>
-            
-            <div className="grid grid-cols-4 gap-4 mb-4">
-                <CreateOption icon={<ImageIcon size={28} strokeWidth={2} />} label="Post" onClick={() => onSelect('post')} color="bg-blue-500" />
-                <CreateOption icon={<Camera size={28} strokeWidth={2} />} label="Vibe" onClick={() => onSelect('vibe')} color="bg-purple-500" />
-                <CreateOption icon={<Film size={28} strokeWidth={2} />} label="Reel" onClick={() => onSelect('reel')} color="bg-pink-500" />
-                <CreateOption icon={<ShoppingBag size={28} strokeWidth={2} />} label="Listing" onClick={() => onSelect('listing')} color="bg-gsn-green" iconColor="text-black" />
-            </div>
-        </div>
-    </>
-);
-
-const CreateOption = ({ icon, label, onClick, color, iconColor = 'text-white' }: any) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-3 group w-full">
-        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-all group-hover:scale-110 active:scale-95 ${color} ${iconColor}`}>
-            {icon}
-        </div>
-        <span className="text-white font-bold text-xs tracking-wide">{label}</span>
-    </button>
-);
-
-interface SidebarItemProps {
-    icon: React.ReactNode;
-    label: string;
-    active: boolean;
-    onClick: () => void;
-    badge?: number;
-}
-
-const SidebarItem = ({ icon, label, active, onClick, badge }: SidebarItemProps) => (
-    <button 
-        onClick={onClick}
-        className={`w-full flex items-center gap-4 p-4 rounded-full transition-all group relative ${active ? 'font-black' : 'hover:bg-white/5'}`}
-    >
-        <div className={`relative ${active ? 'text-gsn-green' : 'text-white group-hover:text-gsn-green transition-colors'}`}>
-            {icon}
-            {badge && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-black px-1">
-                    {badge > 9 ? '9+' : badge}
-                </span>
-            )}
-        </div>
-        <span className={`text-xl hidden xl:block ${active ? 'text-white' : 'text-zinc-400 group-hover:text-white transition-colors'}`}>
-            {label}
-        </span>
-    </button>
-);
-
-const NavButton = React.forwardRef<HTMLButtonElement, { icon: React.ReactNode, active: boolean, onClick: () => void }>(({ icon, active, onClick }, ref) => (
-    <button 
-        ref={ref}
-        onClick={onClick}
-        className={`p-2 rounded-xl transition-all ${active ? 'text-gsn-green scale-110' : 'text-zinc-500 hover:text-white'}`}
-    >
-        {icon}
-    </button>
-));
-NavButton.displayName = 'NavButton';

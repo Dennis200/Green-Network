@@ -539,73 +539,60 @@ export const MOCK_REPORTS = [
     { id: 'r3', type: 'User', reason: 'Fake Profile', user: 'ScammerX', status: 'Reviewed', date: '1d ago' },
 ];
 
-// Mock Journals
 export const MOCK_JOURNALS: GrowJournal[] = [
     {
         id: 'j1',
-        userId: CURRENT_USER.id,
+        userId: 'u1',
         user: CURRENT_USER,
-        title: 'Gorilla Glue #4 - First Hydro Run',
+        title: 'Gorilla Glue #4 - DWC',
         strain: 'Gorilla Glue #4',
         breeder: 'GG Strains',
         method: 'Hydro',
         startDate: '2023-09-15',
         status: 'Active',
-        coverImage: 'https://picsum.photos/800/600?random=201',
-        likes: 124,
-        views: 1205,
+        coverImage: 'https://picsum.photos/800/400?random=j1',
+        likes: 120,
+        views: 450,
         logs: [
             {
                 id: 'l1',
-                week: 1,
-                day: 3,
-                stage: 'Seedling',
-                notes: 'Seeds popped! Transferred to rockwool cubes. keeping humidity high.',
+                week: 4,
+                day: 28,
+                stage: 'Veg',
+                notes: 'Topped today. Roots are looking pearly white. Changed res water.',
                 temp: 78,
-                humidity: 75,
-                date: 'Sep 18',
-                images: ['https://picsum.photos/300/300?random=202']
+                humidity: 60,
+                ec: 1.2,
+                date: 'Oct 12',
+                images: ['https://picsum.photos/400/400?random=l1a', 'https://picsum.photos/400/400?random=l1b']
             },
             {
                 id: 'l2',
-                week: 2,
-                day: 10,
+                week: 3,
+                day: 21,
                 stage: 'Veg',
-                notes: 'First set of true leaves showing. Started light nutrient feed (0.8 EC).',
-                temp: 76,
-                humidity: 65,
-                ec: 0.8,
-                ph: 5.8,
-                date: 'Sep 25',
-                images: ['https://picsum.photos/300/300?random=203']
+                notes: 'Growth is explosive. Increased nutrients slightly.',
+                temp: 77,
+                humidity: 62,
+                ec: 1.0,
+                date: 'Oct 05',
+                images: ['https://picsum.photos/400/400?random=l2']
             }
         ]
     },
     {
         id: 'j2',
-        userId: CURRENT_USER.id,
+        userId: 'u1',
         user: CURRENT_USER,
         title: 'Blue Dream - Living Soil',
         strain: 'Blue Dream',
         breeder: 'Humboldt Seed Org',
         method: 'Soil',
         startDate: '2023-08-01',
-        status: 'Active',
-        coverImage: 'https://picsum.photos/800/600?random=204',
-        likes: 89,
-        views: 850,
-        logs: [
-            {
-                id: 'l3',
-                week: 8,
-                day: 56,
-                stage: 'Flower',
-                notes: 'Week 3 of flower. Stretch is over. Buds starting to stack.',
-                temp: 75,
-                humidity: 50,
-                date: 'Oct 20',
-                images: ['https://picsum.photos/300/300?random=205', 'https://picsum.photos/300/300?random=206']
-            }
-        ]
+        status: 'Completed',
+        coverImage: 'https://picsum.photos/800/400?random=j2',
+        likes: 340,
+        views: 1200,
+        logs: []
     }
 ];

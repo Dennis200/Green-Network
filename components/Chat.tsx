@@ -24,7 +24,11 @@ interface ChatSession {
   online?: boolean;
 }
 
-const Chat: React.FC = () => {
+interface ChatProps {
+    initialUserId?: string | null;
+}
+
+const Chat: React.FC<ChatProps> = ({ initialUserId }) => {
   const [activeTab, setActiveTab] = useState<'dms' | 'groups' | 'friends'>('dms');
   const [selectedChat, setSelectedChat] = useState<ChatSession | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -95,6 +99,20 @@ const Chat: React.FC = () => {
           };
       }
   }, []);
+
+  // Handle Initial User Selection (Deep Link)
+  useEffect(() => {
+      if (initialUserId && chats.length > 0) {
+          const targetChat = chats.find(c => c.members && c.members[initialUserId]);
+          if (targetChat) {
+              setSelectedChat(targetChat);
+          } else {
+              // Logic to start a new chat if one doesn't exist could go here
+              // For simplicity in this demo, we assume the chat exists or user selects from list
+              // In production: trigger startChat service
+          }
+      }
+  }, [initialUserId, chats]);
 
   // --- MESSAGES SUBSCRIPTION ---
   useEffect(() => {

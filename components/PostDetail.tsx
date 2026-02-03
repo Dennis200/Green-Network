@@ -17,9 +17,10 @@ interface PostDetailProps {
     onNavigateToCommunity?: (id: string) => void;
     onSearch: (tag: string) => void;
     onQuote?: (post: Post) => void;
+    highlightCommentId?: string | null;
 }
 
-const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch, onQuote }) => {
+const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNavigateToProfile, onNavigateToCommunity, onSearch, onQuote, highlightCommentId }) => {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [isLiked, setIsLiked] = useState(false);
@@ -45,6 +46,19 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
 
         return () => unsubComments();
     }, [post.id]);
+
+    useEffect(() => {
+        if (highlightCommentId && comments.length > 0) {
+            const element = document.getElementById(`comment-${highlightCommentId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('bg-white/10', 'rounded-xl', 'transition-all', 'duration-1000');
+                setTimeout(() => {
+                    element.classList.remove('bg-white/10');
+                }, 2000);
+            }
+        }
+    }, [highlightCommentId, comments]);
 
     const handleLike = () => {
         if (!auth.currentUser) return;
@@ -316,11 +330,12 @@ const PostDetail: React.FC<PostDetailProps> = ({ post, currentUser, onBack, onNa
                 {/* Comments List */}
                 <div className="pb-20 space-y-1">
                     {comments.map(comment => (
-                        <CommentItem 
-                            key={comment.id} 
-                            comment={comment} 
-                            onNavigateToProfile={onNavigateToProfile}
-                        />
+                        <div key={comment.id} id={`comment-${comment.id}`}>
+                            <CommentItem 
+                                comment={comment} 
+                                onNavigateToProfile={onNavigateToProfile}
+                            />
+                        </div>
                     ))}
                     
                     {comments.length === 0 && (

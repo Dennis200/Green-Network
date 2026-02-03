@@ -9,9 +9,9 @@ interface NotificationsProps {
     onBack?: () => void;
     headerVisible?: boolean;
     onSettings?: () => void;
-    onNavigateToPost: (postId: string) => void;
+    onNavigateToPost: (postId: string, commentId?: string) => void;
     onNavigateToProfile: (userId: string) => void;
-    onNavigateToMessages: () => void;
+    onNavigateToMessages: (userId?: string) => void;
 }
 
 const Notifications: React.FC<NotificationsProps> = ({ 
@@ -48,10 +48,17 @@ const Notifications: React.FC<NotificationsProps> = ({
             case 'mention':
             case 'repost':
                 if (notif.targetId) {
-                    onNavigateToPost(notif.targetId);
+                    onNavigateToPost(notif.targetId, notif.referenceId);
                 } else if (notif.user) {
                     // Fallback to user profile if post ID missing
                     onNavigateToProfile(notif.user.id);
+                }
+                break;
+            case 'message':
+                if (notif.user) {
+                    onNavigateToMessages(notif.user.id);
+                } else {
+                    onNavigateToMessages();
                 }
                 break;
             case 'follow':

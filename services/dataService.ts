@@ -1,7 +1,7 @@
 
 import { ref, push, set, onValue, update, get, remove, child, runTransaction, serverTimestamp } from "firebase/database";
 import { db } from "./firebase";
-import { Post, Product, Community, User, Message, Notification, Vibe, Comment, LinkUpSession } from "../types";
+import { Post, Product, Community, User, Message, Notification, Vibe, Comment, LinkUpSession, Report } from "../types";
 
 // Helper to remove undefined fields which Firebase rejects
 const sanitizeForFirebase = (obj: any) => {
@@ -149,7 +149,8 @@ export const addComment = async (postId: string, text: string, user: User, postA
         createNotification({
             type: 'comment',
             text: `commented: "${text.substring(0, 20)}..."`,
-            targetId: postId
+            targetId: postId,
+            referenceId: newComment.id // Include comment ID for deep linking
         }, postAuthorId, user.id);
     }
 
@@ -420,7 +421,7 @@ export const subscribeToMessages = (chatId: string, onUpdate: (messages: Message
     });
 };
 
-// --- NOTIFICATIONS ---
+// --- NOTIFICATIONS & SYSTEM ---
 
 export const createNotification = async (notifData: Partial<Notification>, recipientId: string, senderId?: string) => {
     const notifRef = ref(db, `notifications/${recipientId}`);
@@ -443,6 +444,21 @@ export const createNotification = async (notifData: Partial<Notification>, recip
     };
 
     await set(newNotifRef, sanitizeForFirebase(newNotif));
+};
+
+export const createSystemAnnouncement = async (message: string) => {
+    // In a real production app with millions of users, this would be a Cloud Function task.
+    // For this implementation, we will push to a 'global_announcements' node that clients listen to, 
+    // OR simply iterate a small set of users if needed (but that's inefficient).
+    // Better approach: Notifications component listens to 'global_announcements' node too.
+    
+    // For simplicity here, we will just add it to a 'system_alerts' collection.
+    // In Notifications.tsx, one would ideally listen to this collection as well.
+    const alertsRef = ref(db, 'system_alerts');
+    await push(alertsRef, {
+        message,
+        timestamp: serverTimestamp()
+    });
 };
 
 export const subscribeToNotifications = (userId: string, onUpdate: (notifs: Notification[]) => void) => {
@@ -477,6 +493,56 @@ export const markAllNotificationsRead = async (userId: string) => {
         if (Object.keys(updates).length > 0) {
             await update(notifRef, updates);
         }
+    }
+};
+
+// --- MODERATION ---
+
+export const createReport = async (reportData: Partial<Report>) => {
+    const reportsRef = ref(db, 'reports');
+    const newReportRef = push(reportsRef);
+    
+    const report: Report = {
+        id: newReportRef.key!,
+        type: reportData.type || 'Post',
+        targetId: reportData.targetId || '',
+        reason: reportData.reason || 'Other',
+        details: reportData.details || '',
+        reportedBy: reportData.reportedBy || 'Anonymous',
+        status: 'Pending',
+        timestamp: new Date().toISOString()
+    };
+
+    await set(newReportRef, sanitizeForFirebase(report));
+};
+
+export const subscribeToReports = (onUpdate: (reports: Report[]) => void) => {
+    const reportsRef = ref(db, 'reports');
+    return onValue(reportsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const reports = Object.values(data) as Report[];
+            onUpdate(reports.reverse());
+        } else {
+            onUpdate([]);
+        }
+    });
+};
+
+export const resolveReport = async (reportId: string, status: 'Resolved' | 'Dismissed') => {
+    const reportRef = ref(db, `reports/${reportId}`);
+    await update(reportRef, { status });
+};
+
+export const deleteContent = async (type: string, id: string) => {
+    let path = '';
+    switch(type) {
+        case 'Post': path = `posts/${id}`; break;
+        case 'Comment': path = `comments/${id}`; break; // Note: Comments structure might need parentId lookup in real app
+        // Add other cases
+    }
+    if (path) {
+        await remove(ref(db, path));
     }
 };
 

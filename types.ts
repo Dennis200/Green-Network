@@ -7,6 +7,7 @@ export interface User {
   email?: string;
   coverImage?: string; 
   verified: boolean;
+  isAdmin?: boolean; // Added for strict access control
   role: 'Grower' | 'Smoker' | 'Educator' | 'Brand' | 'Admin' | 'Moderator';
   bio?: string;
   isSubscribed?: boolean; 
@@ -18,6 +19,7 @@ export interface User {
   spotifyPlaylist?: string;
   previousAvatars?: string[]; 
   previousCovers?: string[]; 
+  isBanned?: boolean; // Added for ban functionality
 }
 
 export interface CommunityChannel {
@@ -88,13 +90,14 @@ export interface Comment {
 
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'mention' | 'repost' | 'system' | 'vibe';
+  type: 'like' | 'comment' | 'follow' | 'mention' | 'repost' | 'system' | 'vibe' | 'message';
   user?: User; 
   text?: string; 
   postImage?: string; 
   timestamp: string;
   read: boolean;
   targetId?: string; // ID of the post, user, or entity to navigate to
+  referenceId?: string; // Sub-ID for deep linking (e.g., comment ID)
 }
 
 export interface Post {
@@ -114,6 +117,17 @@ export interface Post {
   tipAmount?: number; 
   quotedPost?: Post; 
   community?: Community; 
+}
+
+export interface Report {
+    id: string;
+    type: 'Post' | 'User' | 'Community' | 'Message' | 'Comment' | 'Listing';
+    targetId: string;
+    reason: string;
+    details?: string;
+    reportedBy: string; // User ID
+    status: 'Pending' | 'Resolved' | 'Dismissed';
+    timestamp: string;
 }
 
 export interface VibeOverlay {
@@ -215,20 +229,20 @@ export interface GrowLogEntry {
     id: string;
     week: number;
     day: number;
-    stage: 'Seedling' | 'Veg' | 'Flower' | 'Harvest' | 'Curing';
+    stage: 'Seedling' | 'Veg' | 'Flower' | 'Harvest' | 'Cure';
     notes: string;
     temp?: number;
     humidity?: number;
     ec?: number;
     ph?: number;
-    date: string;
     images?: string[];
+    date: string;
 }
 
 export interface GrowJournal {
     id: string;
     userId: string;
-    user: User;
+    user?: User; 
     title: string;
     strain: string;
     breeder?: string;
@@ -261,5 +275,5 @@ export enum ViewState {
   SETTINGS = 'SETTINGS',
   WALLET = 'WALLET',
   SAVED = 'SAVED',
-  GROW_JOURNAL = 'GROW_JOURNAL'
+  LIVESTREAM = 'LIVESTREAM'
 }
