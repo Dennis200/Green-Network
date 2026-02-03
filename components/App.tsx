@@ -28,6 +28,7 @@ import SettingsPage from './components/Settings';
 import WalletPage from './components/Wallet';
 import SavedPage from './components/Saved';
 import { CURRENT_USER, MOCK_POSTS } from './constants';
+import { OnboardingTour } from './components/OnboardingTour';
 
 // --- RIGHT SIDE MENU (BURGER MENU) ---
 const RightSideMenu = ({ isOpen, onClose, onNavigate, unreadMsg, unreadNotif }: { isOpen: boolean; onClose: () => void; onNavigate: (view: ViewState) => void, unreadMsg: number, unreadNotif: number }) => {
@@ -234,6 +235,14 @@ export default function App() {
   // Search State (Global)
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Onboarding Refs
+  const feedRef = useRef(null);
+  const marketplaceRef = useRef(null);
+  const createRef = useRef(null);
+  const communitiesRef = useRef(null);
+  const profileRef = useRef(null);
+  const [showTour, setShowTour] = useState(false);
+
   // --- FIREBASE AUTH & DATABASE LISTENER ---
   useEffect(() => {
     let unsubscribeUser: () => void;
@@ -301,7 +310,8 @@ export default function App() {
       ViewState.REELS,
       ViewState.CREATE_REEL, 
       ViewState.CREATE_VIBE,
-      ViewState.CREATE
+      ViewState.CREATE,
+      ViewState.LINKUP
   ].includes(view);
 
   // Reset marketplace create intent if view changes
@@ -442,7 +452,7 @@ export default function App() {
       case ViewState.CREATE_REEL:
         return <CreateReel onExit={() => setView(ViewState.REELS)} onPostComplete={() => setView(ViewState.REELS)} />;
       case ViewState.LINKUP:
-        return <LinkUp />;
+        return <LinkUp onBack={() => setView(ViewState.FEED)} />;
       case ViewState.MARKETPLACE:
         return <Marketplace onNavigateToChat={() => setView(ViewState.CHAT)} startCreating={marketplaceStartCreate} />;
       case ViewState.POST_DETAILS:
@@ -504,6 +514,14 @@ export default function App() {
   return (
     <div className="flex bg-black text-white min-h-screen font-sans selection:bg-gsn-green selection:text-black">
       
+      {/* Onboarding Tour */}
+      {showTour && (
+          <OnboardingTour 
+            refs={{ feed: feedRef, marketplace: marketplaceRef, create: createRef, communities: communitiesRef, profile: profileRef }} 
+            onComplete={() => setShowTour(false)} 
+          />
+      )}
+
       {/* Left Sidebar (Desktop) */}
       <div className="hidden md:flex flex-col w-[80px] xl:w-[280px] border-r border-white/10 sticky top-0 h-screen p-4 justify-between bg-black z-50">
         <div>
@@ -576,12 +594,13 @@ export default function App() {
                 className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-lg border-t border-white/10 px-6 py-3 flex justify-between items-center z-50 pb-safe transition-transform duration-300 ease-in-out"
                 style={{ transform: bottomNavVisible ? 'translateY(0)' : 'translateY(100%)' }}
             >
-                <NavButton icon={<Home size={26} />} active={view === ViewState.FEED} onClick={() => setView(ViewState.FEED)} />
-                <NavButton icon={<ShoppingBag size={26} />} active={view === ViewState.MARKETPLACE} onClick={() => setView(ViewState.MARKETPLACE)} />
+                <NavButton icon={<Home size={26} />} active={view === ViewState.FEED} onClick={() => setView(ViewState.FEED)} ref={feedRef} />
+                <NavButton icon={<ShoppingBag size={26} />} active={view === ViewState.MARKETPLACE} onClick={() => setView(ViewState.MARKETPLACE)} ref={marketplaceRef} />
                 
                 {/* Floating Action Button */}
                 <div className="relative -top-6">
                     <button 
+                        ref={createRef as React.RefObject<HTMLButtonElement>}
                         onClick={() => setShowCreateMenu(true)}
                         className="w-14 h-14 bg-gsn-green rounded-full flex items-center justify-center text-black shadow-[0_0_20px_rgba(74,222,128,0.4)] border-4 border-black hover:scale-110 active:scale-95 transition-all"
                     >
@@ -589,11 +608,12 @@ export default function App() {
                     </button>
                 </div>
 
-                <NavButton icon={<Users size={26} />} active={view === ViewState.COMMUNITIES} onClick={() => setView(ViewState.COMMUNITIES)} />
+                <NavButton icon={<Users size={26} />} active={view === ViewState.COMMUNITIES} onClick={() => setView(ViewState.COMMUNITIES)} ref={communitiesRef} />
                 <NavButton 
                     icon={<img src={currentUser.avatar} className={`w-7 h-7 rounded-full border-2 ${view === ViewState.PROFILE && !activeUser ? 'border-white' : 'border-transparent'}`} />} 
                     active={view === ViewState.PROFILE && !activeUser} 
                     onClick={() => { setActiveUser(null); setView(ViewState.PROFILE); }} 
+                    ref={profileRef}
                 />
             </div>
         )}

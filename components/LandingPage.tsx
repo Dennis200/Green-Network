@@ -7,9 +7,9 @@ import {
     Camera, ShoppingBag, Radio, Heart, Globe, Briefcase, GraduationCap, 
     Search, HelpCircle, AlertTriangle, Send, Users, BookOpen, ShieldCheck,
     MapPin, TrendingUp, Sprout, Megaphone, Terminal, Cpu, Boxes, Store,
-    Truck, Award, Headphones, Map
+    Truck, Award, Headphones, Map, Key, RefreshCw
 } from 'lucide-react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
 import { createUserProfile, userProfileExists } from '../services/userService';
 import { formatCurrency } from '../utils';
@@ -20,7 +20,7 @@ interface LandingPageProps {
 }
 
 type PublicView = 
-    'HOME' | 'LOGIN' | 'SIGNUP' | 
+    'HOME' | 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' |
     'TERMS' | 'PRIVACY' | 'COOKIES' | 'RULES' | 
     'MARKETPLACE' | 'LINK_UP' |
     'MANIFESTO' | 'CAREERS' | 'MERCH' | 'PARTNERS' |
@@ -40,6 +40,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, isAuthenticated }
             case 'HOME': return <HomeView onNavigate={navigate} onEnterApp={onEnterApp} isAuthenticated={isAuthenticated} />;
             case 'LOGIN': return <LoginView onNavigate={navigate} onEnterApp={onEnterApp} />;
             case 'SIGNUP': return <SignupView onNavigate={navigate} onEnterApp={onEnterApp} />;
+            case 'FORGOT_PASSWORD': return <ForgotPasswordView onNavigate={navigate} />;
             
             // Platform Pages
             case 'MARKETPLACE': return <PublicMarketplaceView onNavigate={navigate} />;
@@ -66,7 +67,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, isAuthenticated }
         }
     };
 
-    const showFooter = view !== 'LOGIN' && view !== 'SIGNUP';
+    const showFooter = view !== 'LOGIN' && view !== 'SIGNUP' && view !== 'FORGOT_PASSWORD';
 
     return (
         <div className="min-h-screen bg-black text-white font-sans selection:bg-gsn-green selection:text-black">
@@ -94,7 +95,7 @@ const PublicHeader = ({ onNavigate, currentView, isAuthenticated, onEnterApp }: 
                         Enter App
                     </button>
                 ) : (
-                    currentView !== 'LOGIN' && currentView !== 'SIGNUP' && (
+                    currentView !== 'LOGIN' && currentView !== 'SIGNUP' && currentView !== 'FORGOT_PASSWORD' && (
                         <div className="flex items-center gap-4">
                             <button 
                                 onClick={() => onNavigate('LOGIN')}
@@ -185,6 +186,10 @@ const SocialIcon = ({ icon }: { icon: React.ReactNode }) => (
     </a>
 );
 
+// ... (Rest of unique pages: Marketplace, LinkUp, Manifesto, Careers, Merch, Partners, Help, Safety, Contact, FAQ, FeatureCard, HomeView remain unchanged) ...
+// TO SAVE SPACE, I AM KEEPING THE UNCHANGED SECTIONS AS THEY WERE.
+// THE ONLY CHANGED SECTIONS ARE LOGINVIEW, SIGNUPVIEW, AND THE NEW FORGOTPASSWORDVIEW BELOW.
+
 // --- UNIQUE PAGE IMPLEMENTATIONS ---
 
 // 1. Marketplace Preview
@@ -229,7 +234,7 @@ const PublicMarketplaceView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 2. Link Up Preview (Map/Radar aesthetic)
+// 2. Link Up Preview
 const LinkUpPreviewView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-[#050505] relative overflow-hidden flex flex-col pt-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(74,222,128,0.1)_0%,transparent_70%)] pointer-events-none"></div>
@@ -270,7 +275,7 @@ const LinkUpPreviewView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 3. Manifesto (Typography Heavy)
+// 3. Manifesto
 const ManifestoView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-zinc-950 pt-32 px-6 pb-20">
         <div className="max-w-4xl mx-auto">
@@ -303,7 +308,7 @@ const ManifestoView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 4. Careers (Corporate/Cool)
+// 4. Careers
 const CareersView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-24 px-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -354,7 +359,7 @@ const CareersView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 5. Merch Store (Visual/Gallery)
+// 5. Merch
 const MerchView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-24 px-6 pb-20">
         <div className="max-w-7xl mx-auto">
@@ -388,7 +393,7 @@ const MerchView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 6. Partners (B2B Focus)
+// 6. Partners
 const PartnersView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-24 px-6 pb-20 flex flex-col items-center">
         <div className="max-w-4xl w-full text-center mb-16">
@@ -428,7 +433,7 @@ const PartnersView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 7. Help Center (Search Focused)
+// 7. Help Center
 const HelpCenterView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-32 px-6 pb-20">
         <div className="max-w-2xl mx-auto text-center mb-16">
@@ -459,7 +464,7 @@ const HelpCenterView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 8. Safety Center (Educational)
+// 8. Safety Center
 const SafetyView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-24 px-6 pb-20">
         <div className="max-w-5xl mx-auto">
@@ -519,7 +524,7 @@ const SafetyView = ({ onNavigate }: any) => (
     </div>
 );
 
-// 9. Contact (Split Form)
+// 9. Contact
 const ContactView = ({ onNavigate }: any) => (
     <div className="min-h-screen bg-black pt-24 px-6 pb-20">
         <div className="max-w-6xl mx-auto">
@@ -756,6 +761,101 @@ const HomeView = ({ onNavigate, onEnterApp, isAuthenticated }: { onNavigate: (v:
     </div>
 );
 
+const ForgotPasswordView = ({ onNavigate }: { onNavigate: (v: PublicView) => void }) => {
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const handleReset = async () => {
+        if (!email) return;
+        setStatus('loading');
+        setErrorMessage('');
+        
+        try {
+            await sendPasswordResetEmail(auth, email);
+            setStatus('success');
+        } catch (error: any) {
+            setStatus('error');
+            setErrorMessage(error.message || 'Failed to send reset email.');
+        }
+    };
+
+    return (
+        <div className="min-h-screen pt-24 pb-12 flex items-center justify-center px-4 bg-black">
+            <div className="w-full max-w-sm space-y-6 animate-in fade-in duration-500">
+                <div className="text-center">
+                    <h2 className="text-2xl font-black text-white mb-1 tracking-tight">Reset Password</h2>
+                    <p className="text-zinc-400 text-sm">Don't worry, it happens to the best of us.</p>
+                </div>
+
+                <div className="bg-zinc-900/50 p-6 rounded-2xl border border-white/5 space-y-5">
+                    {status === 'success' ? (
+                        <div className="text-center space-y-4">
+                            <div className="w-12 h-12 bg-gsn-green/10 rounded-full flex items-center justify-center mx-auto">
+                                <Mail size={24} className="text-gsn-green" />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Check your email</h3>
+                            <p className="text-zinc-400 text-sm leading-relaxed">
+                                We've sent password reset instructions to <span className="text-white font-bold">{email}</span>. 
+                                Please check your spam folder if you don't see it.
+                            </p>
+                            <button 
+                                onClick={() => onNavigate('LOGIN')}
+                                className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors text-sm"
+                            >
+                                Return to Login
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-zinc-500 uppercase">Email Address</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-3 text-zinc-500" size={16} />
+                                        <input 
+                                            type="email" 
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full bg-black text-white text-sm rounded-xl py-2.5 pl-10 pr-4 border border-zinc-800 focus:outline-none focus:border-gsn-green transition-colors"
+                                            placeholder="your@email.com"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {status === 'error' && (
+                                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs flex items-center gap-2">
+                                    <AlertTriangle size={14} /> {errorMessage}
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={handleReset}
+                                disabled={status === 'loading' || !email}
+                                className="w-full bg-gsn-green text-black font-black py-3 rounded-xl hover:bg-green-400 transition-all shadow-[0_0_20px_rgba(74,222,128,0.2)] disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                            >
+                                {status === 'loading' ? (
+                                    <>
+                                        <RefreshCw size={16} className="animate-spin" /> Sending...
+                                    </>
+                                ) : 'Send Reset Link'}
+                            </button>
+
+                            <button 
+                                onClick={() => onNavigate('LOGIN')}
+                                className="w-full py-2 text-zinc-500 hover:text-white text-xs font-bold transition-colors"
+                            >
+                                Back to Login
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const LoginView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) => void, onEnterApp: () => void }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -814,7 +914,12 @@ const LoginView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) => 
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
                                 <label className="text-[10px] font-bold text-zinc-500 uppercase">Password</label>
-                                <button className="text-[10px] text-gsn-green hover:underline font-bold">Forgot?</button>
+                                <button 
+                                    onClick={() => onNavigate('FORGOT_PASSWORD')}
+                                    className="text-[10px] text-gsn-green hover:underline font-bold"
+                                >
+                                    Forgot?
+                                </button>
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-3 text-zinc-500" size={16} />
@@ -881,9 +986,19 @@ const SignupView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) =>
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Password Validation Rules
+    const hasMinLength = password.length >= 8;
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isPasswordValid = hasMinLength && hasNumber && hasSpecial;
+
     const handleSignup = async () => {
         if (!ageVerified) {
             setError("You must verify your age.");
+            return;
+        }
+        if (!isPasswordValid) {
+            setError("Please meet all password requirements.");
             return;
         }
         setLoading(true);
@@ -942,12 +1057,34 @@ const SignupView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) =>
                         </div>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase">Email</label>
+                        <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><Mail size={10}/> Email</label>
                         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-black text-white text-sm rounded-xl py-2.5 px-3 border border-zinc-800 focus:outline-none focus:border-gsn-green transition-colors" placeholder="you@example.com" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase">Password</label>
+                        <label className="text-xs font-bold text-zinc-500 uppercase flex items-center gap-1"><Key size={10}/> Password</label>
                         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-black text-white text-sm rounded-xl py-2.5 px-3 border border-zinc-800 focus:outline-none focus:border-gsn-green transition-colors" placeholder="••••••••" />
+                        
+                        {/* Password Strength Indicators */}
+                        {password.length > 0 && (
+                            <div className="grid grid-cols-3 gap-1 mt-2">
+                                <div className={`h-1 rounded-full ${hasMinLength ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+                                <div className={`h-1 rounded-full ${hasNumber ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+                                <div className={`h-1 rounded-full ${hasSpecial ? 'bg-green-500' : 'bg-zinc-700'}`}></div>
+                            </div>
+                        )}
+                        {password.length > 0 && !isPasswordValid && (
+                            <ul className="text-[10px] text-zinc-500 mt-2 space-y-1 pl-1">
+                                <li className={`flex items-center gap-1 ${hasMinLength ? 'text-green-500' : ''}`}>
+                                    {hasMinLength ? <CheckCircle size={10} /> : <span className="w-2.5 h-2.5 rounded-full border border-zinc-600 block"></span>} 8+ Characters
+                                </li>
+                                <li className={`flex items-center gap-1 ${hasNumber ? 'text-green-500' : ''}`}>
+                                    {hasNumber ? <CheckCircle size={10} /> : <span className="w-2.5 h-2.5 rounded-full border border-zinc-600 block"></span>} At least one number
+                                </li>
+                                <li className={`flex items-center gap-1 ${hasSpecial ? 'text-green-500' : ''}`}>
+                                    {hasSpecial ? <CheckCircle size={10} /> : <span className="w-2.5 h-2.5 rounded-full border border-zinc-600 block"></span>} One special character
+                                </li>
+                            </ul>
+                        )}
                     </div>
                     <div className="flex items-start gap-3 p-3 bg-zinc-800/50 rounded-xl cursor-pointer hover:bg-zinc-800 transition-colors" onClick={() => setAgeVerified(!ageVerified)}>
                         <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${ageVerified ? 'bg-gsn-green border-gsn-green' : 'border-zinc-600 bg-transparent'}`}>
@@ -959,7 +1096,7 @@ const SignupView = ({ onNavigate, onEnterApp }: { onNavigate: (v: PublicView) =>
                     </div>
                     {error && <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs flex items-center gap-2"><AlertTriangle size={14} /> {error}</div>}
                     
-                    <button onClick={handleSignup} disabled={loading || !name || !email || !password || !ageVerified} className="w-full bg-gsn-green text-black font-black py-3 rounded-xl hover:bg-green-400 transition-all shadow-[0_0_20px_rgba(74,222,128,0.2)] disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                    <button onClick={handleSignup} disabled={loading || !name || !email || !isPasswordValid || !ageVerified} className="w-full bg-gsn-green text-black font-black py-3 rounded-xl hover:bg-green-400 transition-all shadow-[0_0_20px_rgba(74,222,128,0.2)] disabled:opacity-50 disabled:cursor-not-allowed text-sm">
                         {loading ? 'Creating Profile...' : 'Create Account'}
                     </button>
 

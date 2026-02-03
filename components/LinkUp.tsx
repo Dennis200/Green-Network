@@ -1,40 +1,139 @@
 
 import React, { useState, useEffect } from 'react';
-import { MapPin, Users, Clock, Navigation, Zap, Flame, Coffee, Gamepad, Trees, X, Radar, Shield, Activity, Target } from 'lucide-react';
-import { MOCK_LINKUPS, CURRENT_USER } from '../constants';
-import { LinkUpSession } from '../types';
+import { MapPin, Users, Clock, Navigation, Zap, Flame, Coffee, Gamepad, Trees, X, Radar, Shield, Activity, Target, ArrowLeft } from 'lucide-react';
+import { CURRENT_USER } from '../constants';
+import { LinkUpSession, User } from '../types';
+import { createLinkUpSession, stopLinkUpSession, subscribeToLinkUps } from '../services/dataService';
+import { auth } from '../services/firebase';
+import { subscribeToUserProfile } from '../services/userService';
 
-const LinkUp: React.FC = () => {
+interface LinkUpProps {
+    onBack: () => void;
+}
+
+const LinkUp: React.FC<LinkUpProps> = ({ onBack }) => {
     const [isHosting, setIsHosting] = useState(false);
     const [duration, setDuration] = useState(60); // minutes
     const [message, setMessage] = useState('');
     const [selectedActivity, setSelectedActivity] = useState<string>('Sesh');
     const [showHostModal, setShowHostModal] = useState(false);
     const [rotation, setRotation] = useState(0);
+    const [sessions, setSessions] = useState<LinkUpSession[]>([]);
+    const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
+    const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
-    // Radar scanning animation logic
+    // Fetch current user and location
+    useEffect(() => {
+        if (auth.currentUser) {
+            subscribeToUserProfile(auth.currentUser.uid, (user) => {
+                if (user) setCurrentUser(user);
+            });
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    });
+                },
+                (error) => console.error("Error getting location", error)
+            );
+        }
+    }, []);
+
+    // Subscribe to sessions
+    useEffect(() => {
+        const unsubscribe = subscribeToLinkUps((liveSessions) => {
+            // Calculate distance if we have user location
+            const processedSessions = liveSessions.map(session => {
+                let dist = 0;
+                if (userLocation) {
+                    dist = calculateDistance(userLocation.lat, userLocation.lng, session.latitude, session.longitude);
+                }
+                return { ...session, distance: parseFloat(dist.toFixed(1)) };
+            });
+            
+            // Sort by distance
+            processedSessions.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+            setSessions(processedSessions);
+
+            // Check if current user is hosting
+            const mySession = liveSessions.find(s => s.user.id === auth.currentUser?.uid);
+            setIsHosting(!!mySession);
+        });
+        return () => unsubscribe();
+    }, [userLocation]);
+
+    // Radar scanning animation
     useEffect(() => {
         const timer = setInterval(() => {
             setRotation(prev => (prev + 2) % 360);
-        }, 30); // 30ms for smooth rotation
+        }, 30);
         return () => clearInterval(timer);
     }, []);
 
-    const toggleHosting = () => {
+    const toggleHosting = async () => {
         if (isHosting) {
-            if(confirm("Stop broadcasting your location?")) setIsHosting(false);
+            if(confirm("Stop broadcasting your location?")) {
+                if (auth.currentUser) {
+                    await stopLinkUpSession(auth.currentUser.uid);
+                    setIsHosting(false);
+                }
+            }
         } else {
             setShowHostModal(true);
         }
     };
 
-    const confirmHosting = () => {
+    const confirmHosting = async () => {
+        if (!userLocation || !auth.currentUser) {
+            alert("Location required to host.");
+            return;
+        }
+
+        const expiresAt = Date.now() + (duration * 60000);
+
+        await createLinkUpSession({
+            latitude: userLocation.lat,
+            longitude: userLocation.lng,
+            message: message || "Chilling...",
+            expiresAt: expiresAt,
+            activity: selectedActivity as any
+        }, currentUser);
+
         setIsHosting(true);
         setShowHostModal(false);
     };
 
+    // Haversine formula for distance in km
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; // Radius of the earth in km
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        const d = R * c; // Distance in km
+        return d;
+    }
+
+    const deg2rad = (deg: number) => {
+        return deg * (Math.PI/180)
+    }
+
     return (
-        <div className="min-h-screen bg-black pb-24 md:pb-0 relative flex flex-col md:flex-row overflow-hidden font-sans">
+        <div className="min-h-screen bg-black relative flex flex-col md:flex-row overflow-hidden font-sans">
+            {/* Header Overlay */}
+            <div className="absolute top-0 left-0 right-0 p-4 z-50 flex items-center justify-between pointer-events-none">
+                <button onClick={onBack} className="pointer-events-auto p-3 bg-black/40 backdrop-blur-md rounded-full text-white border border-white/10 hover:bg-white/10 transition-all">
+                    <ArrowLeft size={24} />
+                </button>
+            </div>
+
             {/* --- IMMERSIVE MAP BACKGROUND --- */}
             <div className="absolute inset-0 z-0 pointer-events-none bg-[#050505]">
                  {/* Radial Gradient Glow */}
@@ -57,7 +156,7 @@ const LinkUp: React.FC = () => {
             <div className="flex-1 relative flex flex-col items-center justify-center p-4 min-h-[55vh]">
                 
                 {/* Header HUD */}
-                <div className="absolute top-6 pt-8 md:pt-0 left-6 z-20">
+                <div className="absolute top-20 left-6 z-20">
                      <h1 className="text-3xl font-black flex items-center gap-3 text-white tracking-tight drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">
                         <Radar className={`text-gsn-green ${isHosting ? 'animate-spin-slow' : ''}`} /> 
                         LINK UP
@@ -97,18 +196,19 @@ const LinkUp: React.FC = () => {
                             </>
                         )}
                         <div className="w-16 h-16 rounded-full border-2 border-gsn-green bg-black p-1 shadow-[0_0_20px_rgba(74,222,128,0.6)] relative z-20 overflow-hidden">
-                             <img src={CURRENT_USER.avatar} className="w-full h-full rounded-full object-cover opacity-90" alt="Me" />
+                             <img src={currentUser.avatar} className="w-full h-full rounded-full object-cover opacity-90" alt="Me" />
                         </div>
                         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 bg-black/80 backdrop-blur border border-white/10 px-3 py-1 rounded-lg text-white text-[10px] font-bold uppercase tracking-widest whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                             You
                         </div>
                     </div>
 
-                    {/* Nearby Users Markers */}
-                    {MOCK_LINKUPS.map((session, index) => {
-                        // Calculate positions (Simulated)
-                        const angle = index * (360 / MOCK_LINKUPS.length) * (Math.PI / 180) + (rotation * 0.005); // Subtle rotation
-                        const radius = 35 + (index * 20); // % from center
+                    {/* Nearby Users Markers - Filtering out 'me' to avoid double render in center if hosting */}
+                    {sessions.filter(s => s.user.id !== currentUser.id).slice(0, 5).map((session, index) => {
+                        // Calculate positions (Simulated spread based on distance logic would be complex for simple radar visual)
+                        // Distributing them in a circle for visual effect based on index
+                        const angle = index * (360 / Math.min(sessions.length, 5)) * (Math.PI / 180) + (rotation * 0.005); 
+                        const radius = 35 + (index * 10) % 30; // vary radius
                         
                         return (
                             <div 
@@ -139,7 +239,7 @@ const LinkUp: React.FC = () => {
             </div>
 
             {/* --- SIDE PANEL / CONTROL CENTER --- */}
-            <div className="w-full md:w-[400px] bg-zinc-900/80 backdrop-blur-2xl border-t md:border-t-0 md:border-l border-white/10 p-6 z-20 flex flex-col h-[45vh] md:h-screen shadow-2xl">
+            <div className="w-full md:w-[400px] bg-zinc-900/80 backdrop-blur-2xl border-t md:border-t-0 md:border-l border-white/10 p-6 z-20 flex flex-col h-[45vh] md:h-screen shadow-2xl pb-safe">
                 
                 {/* Broadcasting Status Card */}
                 <div className={`p-5 rounded-3xl mb-6 border transition-all relative overflow-hidden ${isHosting ? 'bg-gsn-green/10 border-gsn-green' : 'bg-black/40 border-white/5'}`}>
@@ -150,7 +250,7 @@ const LinkUp: React.FC = () => {
                                 {isHosting ? 'Broadcasting Signal' : 'Signal Offline'}
                             </h3>
                             <p className="text-xs text-zinc-400 mt-1 font-medium">
-                                {isHosting ? `Beacon active for ${duration}m. Visible to nearby stoners.` : 'Start hosting to appear on the map.'}
+                                {isHosting ? `Beacon active. Visible to nearby stoners.` : 'Start hosting to appear on the map.'}
                             </p>
                         </div>
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${isHosting ? 'bg-gsn-green text-black border-gsn-green shadow-[0_0_15px_rgba(74,222,128,0.5)]' : 'bg-zinc-800 text-zinc-500 border-white/10'}`}>
@@ -173,38 +273,51 @@ const LinkUp: React.FC = () => {
                     <h3 className="font-bold text-white flex items-center gap-2">
                         <Target size={16} className="text-gsn-green"/> Nearby Sessions
                     </h3>
-                    <span className="bg-zinc-800 text-xs px-2 py-1 rounded-md text-white font-mono border border-white/5">{MOCK_LINKUPS.length} ACTIVE</span>
+                    <span className="bg-zinc-800 text-xs px-2 py-1 rounded-md text-white font-mono border border-white/5">{sessions.length} ACTIVE</span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
-                    {MOCK_LINKUPS.map(session => (
-                        <div key={session.id} className="bg-black/40 p-4 rounded-2xl border border-white/5 hover:border-gsn-green/30 hover:bg-white/[0.02] transition-all cursor-pointer group relative overflow-hidden">
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gsn-green opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="flex items-center gap-4">
-                                <div className="relative">
-                                    <img src={session.user.avatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt="User" />
-                                    <div className="absolute -bottom-2 -right-2 bg-zinc-900 rounded-full p-1.5 border border-zinc-700 shadow-md text-white">
-                                         {getActivityIcon(session.activity)}
+                {sessions.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-zinc-500 border border-dashed border-white/10 rounded-2xl bg-black/20">
+                        <Radar size={48} className="opacity-20 mb-4" />
+                        <p className="text-sm font-bold">No active signals in range.</p>
+                        <p className="text-xs mt-1">Be the first to spark it up!</p>
+                    </div>
+                ) : (
+                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 pb-4">
+                        {sessions.map(session => (
+                            <div key={session.id} className="bg-black/40 p-4 rounded-2xl border border-white/5 hover:border-gsn-green/30 hover:bg-white/[0.02] transition-all cursor-pointer group relative overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gsn-green opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <img src={session.user.avatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt="User" />
+                                        <div className="absolute -bottom-2 -right-2 bg-zinc-900 rounded-full p-1.5 border border-zinc-700 shadow-md text-white">
+                                            {getActivityIcon(session.activity)}
+                                        </div>
                                     </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-center mb-0.5">
+                                            <h4 className="font-bold text-white text-sm truncate">{session.user.name}</h4>
+                                            <span className="text-xs font-mono text-gsn-green whitespace-nowrap">{session.distance}km</span>
+                                        </div>
+                                        <p className="text-xs text-zinc-400 truncate mb-2">"{session.message}"</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-zinc-300 uppercase font-bold tracking-wide">{session.activity}</span>
+                                            {session.expiresAt > Date.now() && (
+                                                <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                                    <Clock size={10} /> 
+                                                    {Math.ceil((session.expiresAt - Date.now()) / 60000)}m left
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button className="p-3 bg-white/5 text-zinc-400 group-hover:text-white group-hover:bg-white/10 rounded-xl transition-all">
+                                        <Navigation size={18} />
+                                    </button>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center mb-0.5">
-                                        <h4 className="font-bold text-white text-sm">{session.user.name}</h4>
-                                        <span className="text-xs font-mono text-gsn-green">{session.distance}km</span>
-                                    </div>
-                                    <p className="text-xs text-zinc-400 truncate mb-2">"{session.message}"</p>
-                                    <div className="flex items-center gap-2">
-                                         <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-zinc-300 uppercase font-bold tracking-wide">{session.activity}</span>
-                                         <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Clock size={10} /> 25m left</span>
-                                    </div>
-                                </div>
-                                <button className="p-3 bg-white/5 text-zinc-400 group-hover:text-white group-hover:bg-white/10 rounded-xl transition-all">
-                                    <Navigation size={18} />
-                                </button>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* --- HOST MODAL --- */}
@@ -301,11 +414,11 @@ const LinkUp: React.FC = () => {
 
 const getActivityIcon = (activity: string) => {
     switch (activity) {
-        case 'Sesh': return <Flame size={12} className="text-orange-500" />;
-        case 'Chilling': return <Zap size={12} className="text-blue-500" />;
-        case 'Food': return <Coffee size={12} className="text-yellow-500" />;
-        case 'Hiking': return <Trees size={12} className="text-green-500" />;
-        case 'Gaming': return <Gamepad size={12} className="text-purple-500" />;
+        case 'Sesh': return <Flame size={12} className="text-white" />;
+        case 'Chilling': return <Zap size={12} className="text-white" />;
+        case 'Food': return <Coffee size={12} className="text-white" />;
+        case 'Hiking': return <Trees size={12} className="text-white" />;
+        case 'Gaming': return <Gamepad size={12} className="text-white" />;
         default: return <MapPin size={12} className="text-white" />;
     }
 }

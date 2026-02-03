@@ -1,7 +1,7 @@
 
 import { ref, push, set, onValue, update, get, remove, child, runTransaction, serverTimestamp } from "firebase/database";
 import { db } from "./firebase";
-import { Post, Product, Community, User, Message, Notification, Vibe, Comment } from "../types";
+import { Post, Product, Community, User, Message, Notification, Vibe, Comment, LinkUpSession } from "../types";
 
 // Helper to remove undefined fields which Firebase rejects
 const sanitizeForFirebase = (obj: any) => {
@@ -297,6 +297,48 @@ export const subscribeToCommunities = (onUpdate: (communities: Community[]) => v
         if (data) {
             const commArray = Object.values(data) as Community[];
             onUpdate(commArray.reverse());
+        } else {
+            onUpdate([]);
+        }
+    });
+};
+
+// --- LINK UP ---
+
+export const createLinkUpSession = async (sessionData: Partial<LinkUpSession>, user: User) => {
+    // Store session under userId to enforce one active session per user
+    const userSessionRef = ref(db, `linkups/${user.id}`);
+
+    const newSession: LinkUpSession = {
+        id: user.id,
+        user: user,
+        latitude: sessionData.latitude || 0,
+        longitude: sessionData.longitude || 0,
+        message: sessionData.message || '',
+        expiresAt: sessionData.expiresAt || (Date.now() + 3600000), // Default 1 hour if not specified
+        activity: sessionData.activity || 'Sesh',
+        // Distance is calculated on client side based on viewer's location
+    };
+
+    await set(userSessionRef, sanitizeForFirebase(newSession));
+    return newSession;
+};
+
+export const stopLinkUpSession = async (userId: string) => {
+    const sessionRef = ref(db, `linkups/${userId}`);
+    await remove(sessionRef);
+};
+
+export const subscribeToLinkUps = (onUpdate: (sessions: LinkUpSession[]) => void) => {
+    const linkupsRef = ref(db, 'linkups');
+    return onValue(linkupsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const sessions = Object.values(data) as LinkUpSession[];
+            // Filter out expired sessions on client side for immediate UI update, 
+            // though backend cleanup is recommended for persistent data
+            const activeSessions = sessions.filter(s => s.expiresAt > Date.now());
+            onUpdate(activeSessions);
         } else {
             onUpdate([]);
         }
