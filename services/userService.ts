@@ -13,8 +13,10 @@ export const USERS_COLLECTION = "users";
 export const createUserProfile = async (uid: string, data: Partial<User>) => {
     const userRef = ref(db, `${USERS_COLLECTION}/${uid}`);
     
+    // We keep CURRENT_USER spread here only as a schema template for new users 
+    // to ensure they have all necessary UI fields (like empty arrays for lists)
     const newUser: User = {
-        ...CURRENT_USER, // Use mock as default structure
+        ...CURRENT_USER, 
         id: uid,
         ...data,
         walletBalance: 100, // Default starting balance
@@ -111,6 +113,66 @@ export const subscribeToAllUsers = (onUpdate: (users: User[]) => void) => {
             onUpdate([]);
         }
     });
+};
+
+/**
+ * Helper to fetch multiple user profiles by ID
+ */
+export const getUsersByIds = async (userIds: string[]): Promise<User[]> => {
+    if (!userIds || userIds.length === 0) return [];
+    
+    const dbRef = ref(db);
+    const users: User[] = [];
+
+    // In a real app, you might use a query, but for RTDB loop reads are common for specific ID lists
+    // or you fetch all users and filter (if dataset is small).
+    // For scalability, individual fetches or a cloud function is better. 
+    // Here we use individual fetches for accuracy.
+    
+    await Promise.all(userIds.map(async (id) => {
+        try {
+            const snap = await get(child(dbRef, `${USERS_COLLECTION}/${id}`));
+            if (snap.exists()) {
+                users.push(snap.val());
+            }
+        } catch (e) {
+            console.error(`Failed to fetch user ${id}`, e);
+        }
+    }));
+
+    return users;
+};
+
+/**
+ * Get list of users following a specific user
+ */
+export const getFollowers = async (userId: string): Promise<User[]> => {
+    const dbRef = ref(db);
+    try {
+        const snap = await get(child(dbRef, `followers/${userId}`));
+        if (!snap.exists()) return [];
+        const ids = Object.keys(snap.val());
+        return await getUsersByIds(ids);
+    } catch (e) {
+        console.error("Error fetching followers", e);
+        return [];
+    }
+};
+
+/**
+ * Get list of users a specific user is following
+ */
+export const getFollowing = async (userId: string): Promise<User[]> => {
+    const dbRef = ref(db);
+    try {
+        const snap = await get(child(dbRef, `following/${userId}`));
+        if (!snap.exists()) return [];
+        const ids = Object.keys(snap.val());
+        return await getUsersByIds(ids);
+    } catch (e) {
+        console.error("Error fetching following", e);
+        return [];
+    }
 };
 
 /**

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag, Eye, Edit, X, CheckCircle } from 'lucide-react';
+import { MapPin, Link as LinkIcon, ArrowLeft, MessageCircle, MoreHorizontal, GraduationCap, Briefcase, Globe, Music, Shield, Grid, Heart, Film, ShoppingBag, Eye, Edit, X, CheckCircle, RefreshCw } from 'lucide-react';
 import { MOCK_POSTS, getUserById, MOCK_REELS, MOCK_VIBES, MOCK_PRODUCTS, CURRENT_USER, MOCK_USERS } from '../constants';
 import { User, Vibe } from '../types';
 import MediaViewer from './MediaViewer';
@@ -9,6 +9,7 @@ import { MoreMenu } from './Menus';
 import ReportModal from './ReportModal';
 import UserShop from './UserShop';
 import { checkIsFollowing, followUser, unfollowUser, subscribeToFollowStats } from '../services/dataService';
+import { getFollowers, getFollowing } from '../services/userService';
 import { auth } from '../services/firebase';
 
 interface ProfileProps {
@@ -38,6 +39,10 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
   const [viewingVibes, setViewingVibes] = useState<{vibes: Vibe[], initialIndex: number} | null>(null);
   const [showFollowList, setShowFollowList] = useState<'followers' | 'following' | null>(null);
   
+  // Follow List Data
+  const [followListData, setFollowListData] = useState<User[]>([]);
+  const [loadingFollowList, setLoadingFollowList] = useState(false);
+
   const userPosts = MOCK_POSTS.filter(p => p.user.id === userId); // Should use real posts eventually
   const userReels = MOCK_REELS.filter(r => r.user.id === userId);
   const userProducts = MOCK_PRODUCTS.filter(p => p.seller.id === userId);
@@ -56,6 +61,31 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
 
       return () => unsubStats();
   }, [userId, isCurrentUser]);
+
+  // Fetch Follow Data when Modal Opens
+  useEffect(() => {
+      if (showFollowList) {
+          setLoadingFollowList(true);
+          setFollowListData([]);
+          
+          const fetchData = async () => {
+              try {
+                  let data: User[] = [];
+                  if (showFollowList === 'followers') {
+                      data = await getFollowers(userId);
+                  } else {
+                      data = await getFollowing(userId);
+                  }
+                  setFollowListData(data);
+              } catch (e) {
+                  console.error(e);
+              } finally {
+                  setLoadingFollowList(false);
+              }
+          };
+          fetchData();
+      }
+  }, [showFollowList, userId]);
 
   const handleToggleFollow = async () => {
       if (!auth.currentUser) return;
@@ -95,8 +125,8 @@ export const Profile: React.FC<ProfileProps> = ({ userId, isCurrentUser, onNavig
             <UserListModal 
                 title={showFollowList === 'followers' ? 'Followers' : 'Following'}
                 onClose={() => setShowFollowList(null)}
-                // Mocking list for now, ideally fetch based on relationships
-                users={MOCK_USERS.filter(u => u.id !== userId).slice(0, 10)} 
+                users={followListData} 
+                loading={loadingFollowList}
                 onNavigateToProfile={(id) => {
                     setShowFollowList(null);
                     onNavigateToProfile(id);
@@ -367,7 +397,7 @@ const EmptyState = ({ label, sub }: { label: string, sub?: string }) => (
 );
 
 // --- FOLLOWERS / FOLLOWING MODAL ---
-const UserListModal = ({ title, users, onClose, onNavigateToProfile }: { title: string, users: User[], onClose: () => void, onNavigateToProfile: (id: string) => void }) => {
+const UserListModal = ({ title, users, loading, onClose, onNavigateToProfile }: { title: string, users: User[], loading: boolean, onClose: () => void, onNavigateToProfile: (id: string) => void }) => {
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
             <div className="bg-zinc-900 w-full max-w-md rounded-3xl border border-white/10 flex flex-col max-h-[80vh]" onClick={e => e.stopPropagation()}>
@@ -377,24 +407,32 @@ const UserListModal = ({ title, users, onClose, onNavigateToProfile }: { title: 
                         <X size={20} />
                     </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
-                    {users.map(user => (
-                        <div key={user.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => onNavigateToProfile(user.id)}>
-                            <img src={user.avatar} className="w-12 h-12 rounded-full border border-white/10 object-cover" />
-                            <div className="flex-1">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-white text-sm">{user.name}</span>
-                                    {user.verified && <CheckCircle size={12} className="text-gsn-green" />}
-                                </div>
-                                <span className="text-zinc-500 text-xs">{user.handle}</span>
-                            </div>
-                            <button className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:bg-zinc-200">
-                                View
-                            </button>
+                <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+                    {loading ? (
+                        <div className="p-8 flex justify-center">
+                            <RefreshCw className="animate-spin text-gsn-green" />
                         </div>
-                    ))}
-                    {users.length === 0 && (
-                        <div className="p-8 text-center text-zinc-500">No users found.</div>
+                    ) : (
+                        <>
+                            {users.map(user => (
+                                <div key={user.id} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => onNavigateToProfile(user.id)}>
+                                    <img src={user.avatar} className="w-12 h-12 rounded-full border border-white/10 object-cover" alt={user.name} />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="font-bold text-white text-sm">{user.name}</span>
+                                            {user.verified && <CheckCircle size={12} className="text-gsn-green" />}
+                                        </div>
+                                        <span className="text-zinc-500 text-xs">{user.handle}</span>
+                                    </div>
+                                    <button className="px-4 py-1.5 bg-white text-black text-xs font-bold rounded-full hover:bg-zinc-200">
+                                        View
+                                    </button>
+                                </div>
+                            ))}
+                            {users.length === 0 && (
+                                <div className="p-8 text-center text-zinc-500">No users found.</div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
